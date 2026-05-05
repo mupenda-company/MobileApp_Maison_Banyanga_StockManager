@@ -1,0 +1,256 @@
+import 'dart:typed_data';
+
+import 'package:flutter/material.dart';
+import 'package:pdf/pdf.dart';
+import 'package:pdf/widgets.dart' as pw;
+import 'package:printing/printing.dart';
+
+class SaleInvoiceLine {
+  final String produitNom;
+  final double caisses;
+  final double prixCaisse;
+  final double sousTotal;
+
+  const SaleInvoiceLine({
+    required this.produitNom,
+    required this.caisses,
+    required this.prixCaisse,
+    required this.sousTotal,
+  });
+}
+
+class SaleInvoicePage extends StatefulWidget {
+  final String? numeroFacture;
+  final int venteId;
+  final DateTime date;
+  final String clientNom;
+  final String? clientTelephone;
+  final String? zoneNom;
+  final String devise;
+
+  final String? companyName;
+  final String? companyAddress;
+  final String? companyTelephone;
+
+  final double? produitsCumules;
+  final double? caPeriode;
+  final double? ristourneTaux;
+  final double? ristourneMontant;
+  final bool ristourneInfoPresent;
+
+  final String? vendeurNom;
+
+  final double totalHt;
+  final double totalTva;
+  final double totalTtc;
+
+  final List<SaleInvoiceLine> lignes;
+
+  const SaleInvoicePage({
+    super.key,
+    required this.venteId,
+    required this.date,
+    required this.clientNom,
+    this.clientTelephone,
+    this.zoneNom,
+    required this.devise,
+    this.companyName,
+    this.companyAddress,
+    this.companyTelephone,
+    this.produitsCumules,
+    this.caPeriode,
+    this.ristourneTaux,
+    this.ristourneMontant,
+    this.ristourneInfoPresent = false,
+    this.vendeurNom,
+    required this.totalHt,
+    required this.totalTva,
+    required this.totalTtc,
+    required this.lignes,
+    this.numeroFacture,
+  });
+
+  @override
+  State<SaleInvoicePage> createState() => _SaleInvoicePageState();
+}
+
+class _SaleInvoicePageState extends State<SaleInvoicePage> {
+  bool _autoPrintDone = false;
+
+  String _fmtAmount(double value) {
+    final v = value.isNaN || value.isInfinite ? 0 : value;
+    return '${v.toStringAsFixed(2)} ${widget.devise}';
+  }
+
+  Future<Uint8List> _buildPdf(PdfPageFormat format) async {
+    final doc = pw.Document();
+
+    final title = widget.numeroFacture == null || widget.numeroFacture!.isEmpty
+        ? 'FACTURE: ${widget.venteId}'
+        : 'FACTURE: ${widget.numeroFacture}';
+
+    doc.addPage(
+      pw.Page(
+        pageFormat: format,
+        margin: const pw.EdgeInsets.all(12),
+        build: (context) {
+          final company = (widget.companyName == null || widget.companyName!.trim().isEmpty)
+              ? 'Bralima Logistique'
+              : widget.companyName!.trim();
+
+          final adresse = widget.companyAddress?.trim();
+          final telSociete = widget.companyTelephone?.trim();
+
+          final clientTel = widget.clientTelephone?.trim();
+          final zone = widget.zoneNom?.trim();
+
+          final hasRistourne = (widget.ristourneMontant != null && widget.ristourneMontant!.abs() > 0) ||
+              (widget.ristourneTaux != null && widget.ristourneTaux!.abs() > 0);
+
+          return pw.DefaultTextStyle(
+            style: const pw.TextStyle(fontSize: 10),
+            child: pw.Column(
+              crossAxisAlignment: pw.CrossAxisAlignment.stretch,
+              children: [
+                pw.Center(
+                  child: pw.Column(
+                    children: [
+                      pw.Text(company.toUpperCase(), style: pw.TextStyle(fontSize: 14, fontWeight: pw.FontWeight.bold)),
+                      if (adresse != null && adresse.isNotEmpty) pw.Text(adresse, style: const pw.TextStyle(fontSize: 8)),
+                      if (telSociete != null && telSociete.isNotEmpty) pw.Text('Tél: $telSociete', style: const pw.TextStyle(fontSize: 8)),
+                      pw.SizedBox(height: 6),
+                      pw.Divider(thickness: 1),
+                      pw.SizedBox(height: 4),
+                      pw.Text(title, style: pw.TextStyle(fontWeight: pw.FontWeight.bold)),
+                      pw.SizedBox(height: 2),
+                      pw.Text(
+                        '${widget.date.day.toString().padLeft(2, '0')}/${widget.date.month.toString().padLeft(2, '0')}/${widget.date.year} ${widget.date.hour.toString().padLeft(2, '0')}:${widget.date.minute.toString().padLeft(2, '0')}',
+                      ),
+                    ],
+                  ),
+                ),
+                pw.SizedBox(height: 10),
+                pw.Text('Client: ${widget.clientNom}', style: pw.TextStyle(fontWeight: pw.FontWeight.bold)),
+                if (clientTel != null && clientTel.isNotEmpty) pw.Text('Numéro: $clientTel'),
+                if (zone != null && zone.isNotEmpty) pw.Text('Zone: $zone'),
+                if (widget.produitsCumules != null && widget.produitsCumules! > 0)
+                  pw.Text(
+                    widget.ristourneInfoPresent
+                        ? 'Produits cumulés (période): ${widget.produitsCumules!.toStringAsFixed(1)} cs'
+                        : 'Produits cumulés: ${widget.produitsCumules!.toStringAsFixed(1)} cs',
+                  ),
+                if (widget.caPeriode != null && widget.caPeriode! > 0) pw.Text('CA (période): ${_fmtAmount(widget.caPeriode!)}'),
+                if (hasRistourne)
+                  pw.Text(
+                    'Ristourne: ${(widget.ristourneTaux ?? 0).toStringAsFixed(2)}% (${_fmtAmount(widget.ristourneMontant ?? 0)})',
+                  ),
+                pw.SizedBox(height: 6),
+                pw.Divider(thickness: 1),
+                pw.SizedBox(height: 6),
+                ...widget.lignes.map(
+                  (l) => pw.Padding(
+                    padding: const pw.EdgeInsets.only(bottom: 6),
+                    child: pw.Column(
+                      crossAxisAlignment: pw.CrossAxisAlignment.start,
+                      children: [
+                        pw.Text(l.produitNom, style: pw.TextStyle(fontWeight: pw.FontWeight.bold)),
+                        pw.SizedBox(height: 2),
+                        pw.Row(
+                          mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+                          children: [
+                            pw.Text('${l.caisses.toStringAsFixed(1)} cs x ${_fmtAmount(l.prixCaisse)}'),
+                            pw.Text(_fmtAmount(l.sousTotal), style: pw.TextStyle(fontWeight: pw.FontWeight.bold)),
+                          ],
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+                pw.Divider(thickness: 1),
+                pw.SizedBox(height: 6),
+                pw.Row(
+                  mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+                  children: [
+                    pw.Text('Total HT:'),
+                    pw.Text(_fmtAmount(widget.totalHt)),
+                  ],
+                ),
+                pw.SizedBox(height: 2),
+                pw.Row(
+                  mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+                  children: [
+                    pw.Text('TVA:'),
+                    pw.Text(_fmtAmount(widget.totalTva)),
+                  ],
+                ),
+                pw.SizedBox(height: 4),
+                pw.Container(
+                  padding: const pw.EdgeInsets.only(top: 6),
+                  decoration: const pw.BoxDecoration(border: pw.Border(top: pw.BorderSide(width: 1))),
+                  child: pw.Row(
+                    mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+                    children: [
+                      pw.Text('TOTAL TTC:', style: pw.TextStyle(fontWeight: pw.FontWeight.bold, fontSize: 12)),
+                      pw.Text(_fmtAmount(widget.totalTtc), style: pw.TextStyle(fontWeight: pw.FontWeight.bold, fontSize: 12)),
+                    ],
+                  ),
+                ),
+                pw.SizedBox(height: 12),
+                pw.Center(child: pw.Text('Merci pour votre confiance !', style: const pw.TextStyle(fontSize: 9))),
+                if (widget.vendeurNom != null && widget.vendeurNom!.trim().isNotEmpty)
+                  pw.Center(child: pw.Text('Vendeur: ${widget.vendeurNom!.trim()}', style: const pw.TextStyle(fontSize: 8))),
+              ],
+            ),
+          );
+        },
+      ),
+    );
+
+    return doc.save();
+  }
+
+  Future<void> _print() async {
+    await Printing.layoutPdf(
+      onLayout: (format) => _buildPdf(PdfPageFormat.a6),
+      name: widget.numeroFacture == null || widget.numeroFacture!.isEmpty ? 'facture_${widget.venteId}.pdf' : '${widget.numeroFacture}.pdf',
+    );
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (_autoPrintDone) return;
+    _autoPrintDone = true;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _print();
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return SafeArea(
+      child: Scaffold(
+        appBar: AppBar(
+          title: const Text('Facture'),
+          actions: [
+            IconButton(
+              icon: const Icon(Icons.print),
+              onPressed: _print,
+            ),
+            IconButton(
+              icon: const Icon(Icons.check),
+              onPressed: () {
+                Navigator.pop(context, true);
+              },
+            ),
+          ],
+        ),
+        body: PdfPreview(
+          canChangePageFormat: false,
+          initialPageFormat: PdfPageFormat.a6,
+          build: _buildPdf,
+        ),
+      ),
+    );
+  }
+}
