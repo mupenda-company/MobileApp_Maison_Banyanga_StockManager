@@ -77,6 +77,17 @@ class _CreateSalePageState extends State<CreateSalePage> {
     return d <= 0 ? 24 : d;
   }
 
+  double _prixCaisseBase(Map<String, dynamic> item) {
+    final btlParCs = _btlParCaisse(item);
+    final prixCaisse = _asDouble(item['prix_vente_caisses']);
+    if (prixCaisse > 0) {
+      return prixCaisse;
+    }
+
+    final prixUnitaire = _asDouble(item['prix_vente_unitaire']);
+    return prixUnitaire * btlParCs;
+  }
+
   String? get _missionId {
     return AuthService.instance.session?.mission?['id']?.toString();
   }
@@ -199,11 +210,8 @@ class _CreateSalePageState extends State<CreateSalePage> {
       final qtyCs = double.tryParse(qtyCsText.replaceAll(',', '.')) ?? 0;
       if (qtyCs <= 0) continue;
 
-      final btlParCs = _btlParCaisse(item);
-      final qtyBtl = qtyCs * btlParCs;
-
-      final puBase = _asDouble(item['prix_vente_unitaire']);
-      total += qtyBtl * puBase;
+      final prixCaisseBase = _prixCaisseBase(item);
+      total += qtyCs * prixCaisseBase;
     }
     return total;
   }
@@ -246,10 +254,15 @@ class _CreateSalePageState extends State<CreateSalePage> {
 
       final btlParCs = _btlParCaisse(item);
       final qtyBtl = qtyCs * btlParCs;
+      final prixCaisseBase = _prixCaisseBase(item);
+      final prixCaisseDisplay = _toDisplay(prixCaisseBase);
 
       produits.add({
         'produit_id': id,
         'quantite': qtyBtl,
+        'quantite_caisses': qtyCs,
+        'prix_caisse': prixCaisseDisplay,
+        'prix_unitaire': prixCaisseDisplay / btlParCs,
       });
     }
 
@@ -351,10 +364,11 @@ class _CreateSalePageState extends State<CreateSalePage> {
 
                 final btlParCs = _asDouble(d['bouteilles_par_caisses']);
                 final denom = btlParCs <= 0 ? 24 : btlParCs;
-                final caisses = quantite / denom;
+                final caisses = _asDouble(d['quantite_caisses']) > 0 ? _asDouble(d['quantite_caisses']) : (quantite / denom);
 
-                final prixUnitaireBase = _asDouble(d['prix_unitaire']);
-                final prixCaisseBase = prixUnitaireBase * denom;
+                final prixCaisseBase = _asDouble(d['prix_caisse']) > 0
+                    ? _asDouble(d['prix_caisse'])
+                    : (_asDouble(d['prix_unitaire']) * denom);
                 final sousTotalBase = _asDouble(d['sous_total']);
 
                 lignes.add(
@@ -647,12 +661,10 @@ class _CreateSalePageState extends State<CreateSalePage> {
                                     final stockActuelBtl = _asDouble(item['stock_actuel']);
                                     final btlParCs = _btlParCaisse(item);
                                     final stockActuelCs = stockActuelBtl / btlParCs;
-
-                                    final puBase = _asDouble(item['prix_vente_unitaire']);
-                                    final puDisplay = _toDisplay(puBase);
+                                    final prixCaisseDisplay = _toDisplay(_prixCaisseBase(item));
 
                                     return Text(
-                                      'Stock: ${stockActuelCs.toStringAsFixed(1)} cs  |  PU: ${_fmtAmount(puDisplay)}',
+                                      'Stock: ${stockActuelCs.toStringAsFixed(1)} cs  |  Prix caisse: ${_fmtAmount(prixCaisseDisplay)}',
                                       style: Theme.of(context).textTheme.bodySmall?.copyWith(color: scheme.onSurfaceVariant),
                                     );
                                   },

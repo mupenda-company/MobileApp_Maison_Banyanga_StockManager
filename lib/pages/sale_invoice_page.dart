@@ -158,7 +158,14 @@ class _SaleInvoicePageState extends State<SaleInvoicePage> {
                         pw.Row(
                           mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
                           children: [
-                            pw.Text('${l.caisses.toStringAsFixed(1)} cs x ${_fmtAmount(l.prixCaisse)}'),
+                            pw.Text('${l.caisses.toStringAsFixed(1)} cs'),
+                            pw.Text(_fmtAmount(l.prixCaisse), style: pw.TextStyle(fontWeight: pw.FontWeight.bold)),
+                          ],
+                        ),
+                        pw.Row(
+                          mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+                          children: [
+                            pw.Text(''),
                             pw.Text(_fmtAmount(l.sousTotal), style: pw.TextStyle(fontWeight: pw.FontWeight.bold)),
                           ],
                         ),
