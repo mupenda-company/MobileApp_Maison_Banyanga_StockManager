@@ -658,13 +658,14 @@ class _CreateSalePageState extends State<CreateSalePage> {
                                 const SizedBox(height: 4),
                                 Builder(
                                   builder: (context) {
-                                    final stockActuelBtl = _asDouble(item['stock_actuel']);
+                                    final stockActuelCs = _asDouble(item['stock_actuel_caisses']);
+                                    final stockActuelAlias = _asDouble(item['stock_actuel']);
                                     final btlParCs = _btlParCaisse(item);
-                                    final stockActuelCs = stockActuelBtl / btlParCs;
+                                    final stockActuelDisplay = stockActuelCs > 0 ? stockActuelCs : (stockActuelAlias > 0 ? stockActuelAlias : (_asDouble(item['stock_actuel_bouteilles']) / btlParCs));
                                     final prixCaisseDisplay = _toDisplay(_prixCaisseBase(item));
 
                                     return Text(
-                                      'Stock: ${stockActuelCs.toStringAsFixed(1)} cs  |  Prix caisse: ${_fmtAmount(prixCaisseDisplay)}',
+                                      'Stock: ${stockActuelDisplay.toStringAsFixed(1)} cs  |  Prix caisse: ${_fmtAmount(prixCaisseDisplay)}',
                                       style: Theme.of(context).textTheme.bodySmall?.copyWith(color: scheme.onSurfaceVariant),
                                     );
                                   },

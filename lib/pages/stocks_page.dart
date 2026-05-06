@@ -134,7 +134,7 @@ class _StocksPageState extends State<StocksPage> {
   Widget _stockCard(Map<String, dynamic> item, ColorScheme scheme) {
     final name = (item['nom'] ?? item['name'] ?? item['product'] ?? 'Produit').toString();
     final emplacement = (item['emplacement_nom'] ?? item['location'] ?? item['emplacement'] ?? 'Emplacement').toString();
-    final quantite = (item['stock_actuel'] ?? item['quantity'] ?? item['qty'] ?? item['stock'] ?? 0).toString();
+    final quantite = (item['stock_actuel_caisses'] ?? item['stock_actuel'] ?? item['quantity'] ?? item['qty'] ?? item['stock'] ?? 0).toString();
     final rawQty = double.tryParse(quantite.replaceAll(',', '.')) ?? 0;
     final isLow = rawQty <= 0;
 
@@ -208,7 +208,7 @@ class _StocksPageState extends State<StocksPage> {
                       Icon(Icons.local_shipping_outlined, size: 16, color: scheme.onSurfaceVariant),
                       const SizedBox(width: 6),
                       Text(
-                        '$quantite unité(s)',
+                        '$quantite cs',
                         style: TextStyle(
                           color: scheme.onSurfaceVariant,
                           fontWeight: FontWeight.w600,
@@ -231,7 +231,7 @@ class _StocksPageState extends State<StocksPage> {
     final stocksCount = _stocks.length;
     final totalQuantity = _stocks.fold<double>(0, (sum, item) {
       if (item is Map<String, dynamic>) {
-        final raw = item['stock_actuel'] ?? item['quantity'] ?? item['qty'] ?? item['stock'] ?? 0;
+        final raw = item['stock_actuel_caisses'] ?? item['stock_actuel'] ?? item['quantity'] ?? item['qty'] ?? item['stock'] ?? 0;
         return sum + (raw is num ? raw.toDouble() : double.tryParse(raw.toString().replaceAll(',', '.')) ?? 0);
       }
       return sum;
@@ -302,7 +302,7 @@ class _StocksPageState extends State<StocksPage> {
                     const SizedBox(width: 12),
                     Expanded(
                       child: _summaryTile(
-                        label: 'Quantité totale',
+                        label: 'Caisses totales',
                         value: totalQuantity.toStringAsFixed(0),
                         icon: Icons.all_inbox,
                         scheme: scheme,
