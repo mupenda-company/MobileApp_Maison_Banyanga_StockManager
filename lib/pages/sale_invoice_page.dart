@@ -1,6 +1,7 @@
 import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
+import 'package:logis_agent/config/app_config.dart';
 import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
 import 'package:printing/printing.dart';
@@ -31,6 +32,13 @@ class SaleInvoicePage extends StatefulWidget {
   final String? companyName;
   final String? companyAddress;
   final String? companyTelephone;
+  final String? companyLogo;
+  final String? companyEmail;
+  final String? companyContact;
+  final String? companyRccm;
+  final String? companyIdNat;
+  final String? companyNif;
+  final String? companyAccount;
 
   final double? produitsCumules;
   final double? caPeriode;
@@ -57,6 +65,13 @@ class SaleInvoicePage extends StatefulWidget {
     this.companyName,
     this.companyAddress,
     this.companyTelephone,
+    this.companyLogo,
+    this.companyEmail,
+    this.companyContact,
+    this.companyRccm,
+    this.companyIdNat,
+    this.companyNif,
+    this.companyAccount,
     this.produitsCumules,
     this.caPeriode,
     this.ristourneTaux,
@@ -77,6 +92,38 @@ class SaleInvoicePage extends StatefulWidget {
 class _SaleInvoicePageState extends State<SaleInvoicePage> {
   bool _autoPrintDone = false;
 
+  String? _resolveLogoUrl(String? logo) {
+    final l = logo?.trim();
+    if (l == null || l.isEmpty) return null;
+    if (l.startsWith('http://') || l.startsWith('https://')) return l;
+
+    final base = AppConfig.apiBaseUrl;
+    if (base.isEmpty) return null;
+
+    final normalizedBase = base.endsWith('/') ? base.substring(0, base.length - 1) : base;
+    var relative = l.startsWith('/') ? l.substring(1) : l;
+
+    if (relative.startsWith('public/uploads/')) {
+      relative = relative.substring('public/'.length);
+    } else if (relative.startsWith('public/')) {
+      relative = relative.substring('public/'.length);
+    } else if (!relative.startsWith('uploads/')) {
+      relative = 'uploads/$relative';
+    }
+
+    return '$normalizedBase/$relative';
+  }
+
+  Future<pw.ImageProvider?> _loadLogoImage(String? logoUrl) async {
+    if (logoUrl == null || logoUrl.trim().isEmpty) return null;
+
+    try {
+      return await networkImage(logoUrl);
+    } catch (_) {
+      return null;
+    }
+  }
+
   String _fmtAmount(double value) {
     final v = value.isNaN || value.isInfinite ? 0 : value;
     return '${v.toStringAsFixed(2)} ${widget.devise}';
@@ -89,6 +136,10 @@ class _SaleInvoicePageState extends State<SaleInvoicePage> {
         ? 'FACTURE: ${widget.venteId}'
         : 'FACTURE: ${widget.numeroFacture}';
 
+    final logoImage = widget.companyLogo != null && widget.companyLogo!.trim().isNotEmpty
+        ? await _loadLogoImage(_resolveLogoUrl(widget.companyLogo))
+        : null;
+
     doc.addPage(
       pw.Page(
         pageFormat: format,
@@ -100,9 +151,16 @@ class _SaleInvoicePageState extends State<SaleInvoicePage> {
 
           final adresse = widget.companyAddress?.trim();
           final telSociete = widget.companyTelephone?.trim();
+          final email = widget.companyEmail?.trim();
+          final contact = widget.companyContact?.trim();
+          final rccm = widget.companyRccm?.trim();
+          final idNat = widget.companyIdNat?.trim();
+          final nif = widget.companyNif?.trim();
+          final compte = widget.companyAccount?.trim();
 
           final clientTel = widget.clientTelephone?.trim();
           final zone = widget.zoneNom?.trim();
+          final totalCaisses = widget.lignes.fold<double>(0, (sum, line) => sum + line.caisses);
 
           final hasRistourne = (widget.ristourneMontant != null && widget.ristourneMontant!.abs() > 0) ||
               (widget.ristourneTaux != null && widget.ristourneTaux!.abs() > 0);
@@ -115,9 +173,26 @@ class _SaleInvoicePageState extends State<SaleInvoicePage> {
                 pw.Center(
                   child: pw.Column(
                     children: [
+                      if (logoImage != null)
+                        pw.Container(
+                          width: 52,
+                          height: 52,
+                          margin: const pw.EdgeInsets.only(bottom: 6),
+                          child: pw.ClipRRect(
+                            horizontalRadius: 8,
+                            verticalRadius: 8,
+                            child: pw.Image(logoImage, fit: pw.BoxFit.cover),
+                          ),
+                        ),
                       pw.Text(company.toUpperCase(), style: pw.TextStyle(fontSize: 14, fontWeight: pw.FontWeight.bold)),
                       if (adresse != null && adresse.isNotEmpty) pw.Text(adresse, style: const pw.TextStyle(fontSize: 8)),
                       if (telSociete != null && telSociete.isNotEmpty) pw.Text('Tél: $telSociete', style: const pw.TextStyle(fontSize: 8)),
+                      if (email != null && email.isNotEmpty) pw.Text('Email: $email', style: const pw.TextStyle(fontSize: 8)),
+                      if (contact != null && contact.isNotEmpty) pw.Text('Contact: $contact', style: const pw.TextStyle(fontSize: 8)),
+                      if (rccm != null && rccm.isNotEmpty) pw.Text('RCCM: $rccm', style: const pw.TextStyle(fontSize: 8)),
+                      if (idNat != null && idNat.isNotEmpty) pw.Text('ID NAT: $idNat', style: const pw.TextStyle(fontSize: 8)),
+                      if (nif != null && nif.isNotEmpty) pw.Text('NIF: $nif', style: const pw.TextStyle(fontSize: 8)),
+                      if (compte != null && compte.isNotEmpty) pw.Text('Compte: $compte', style: const pw.TextStyle(fontSize: 8)),
                       pw.SizedBox(height: 6),
                       pw.Divider(thickness: 1),
                       pw.SizedBox(height: 4),
@@ -178,6 +253,14 @@ class _SaleInvoicePageState extends State<SaleInvoicePage> {
                 pw.Row(
                   mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
                   children: [
+                    pw.Text('Total caisses achetées:'),
+                    pw.Text('${totalCaisses.toStringAsFixed(1)} cs', style: pw.TextStyle(fontWeight: pw.FontWeight.bold)),
+                  ],
+                ),
+                pw.SizedBox(height: 2),
+                pw.Row(
+                  mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+                  children: [
                     pw.Text('Total HT:'),
                     pw.Text(_fmtAmount(widget.totalHt)),
                   ],
@@ -220,6 +303,27 @@ class _SaleInvoicePageState extends State<SaleInvoicePage> {
     await Printing.layoutPdf(
       onLayout: (format) => _buildPdf(PdfPageFormat.a6),
       name: widget.numeroFacture == null || widget.numeroFacture!.isEmpty ? 'facture_${widget.venteId}.pdf' : '${widget.numeroFacture}.pdf',
+    );
+  }
+
+  pw.Widget _tableHeader(String text) {
+    return pw.Padding(
+      padding: const pw.EdgeInsets.symmetric(vertical: 6, horizontal: 4),
+      child: pw.Text(text, style: pw.TextStyle(fontWeight: pw.FontWeight.bold, fontSize: 8.5)),
+    );
+  }
+
+  pw.Widget _tableCell(String text, {bool bold = false, pw.Alignment align = pw.Alignment.centerLeft}) {
+    return pw.Container(
+      alignment: align,
+      padding: const pw.EdgeInsets.symmetric(vertical: 5, horizontal: 4),
+      child: pw.Text(
+        text,
+        style: pw.TextStyle(
+          fontSize: 8.5,
+          fontWeight: bold ? pw.FontWeight.bold : pw.FontWeight.normal,
+        ),
+      ),
     );
   }
 

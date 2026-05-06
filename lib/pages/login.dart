@@ -55,7 +55,7 @@ class _LoginState extends State<Login> {
 
       if (payload != null) {
         AppThemeController.instance.updateFromSettings(payload);
-        final logo = payload['logo']?.toString();
+        final logo = payload['logo_url']?.toString() ?? payload['logo']?.toString();
         if (logo != null && logo.trim().isNotEmpty) {
           _brandingLogo = logo.trim();
         }
@@ -82,10 +82,17 @@ class _LoginState extends State<Login> {
     if (base.isEmpty) return null;
 
     final normalizedBase = base.endsWith('/') ? base.substring(0, base.length - 1) : base;
-    if (l.startsWith('/')) {
-      return '$normalizedBase$l';
+    var relative = l.startsWith('/') ? l.substring(1) : l;
+
+    if (relative.startsWith('public/uploads/')) {
+      relative = relative.substring('public/'.length);
+    } else if (relative.startsWith('public/')) {
+      relative = relative.substring('public/'.length);
+    } else if (!relative.startsWith('uploads/')) {
+      relative = 'uploads/$relative';
     }
-    return '$normalizedBase/$l';
+
+    return '$normalizedBase/$relative';
   }
 
   Future<void> login() async {
@@ -161,7 +168,7 @@ class _LoginState extends State<Login> {
                           width: 92,
                           height: 92,
                           fit: BoxFit.cover,
-                          errorBuilder: (_, __, ___) => Icon(Icons.storefront, size: 72, color: scheme.primary),
+                          errorBuilder: (_, _, _) => Icon(Icons.storefront, size: 72, color: scheme.primary),
                         ),
                       )
                     else

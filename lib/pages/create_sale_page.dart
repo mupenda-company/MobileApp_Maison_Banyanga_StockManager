@@ -314,6 +314,13 @@ class _CreateSalePageState extends State<CreateSalePage> {
       String? companyName;
       String? companyAddress;
       String? companyTelephone;
+      String? companyLogo;
+      String? companyEmail;
+      String? companyContact;
+      String? companyRccm;
+      String? companyIdNat;
+      String? companyNif;
+      String? companyAccount;
 
       double? produitsCumules;
       double? caPeriode;
@@ -339,6 +346,13 @@ class _CreateSalePageState extends State<CreateSalePage> {
             companyName = params['nom_entreprise']?.toString();
             companyAddress = params['adresse']?.toString();
             companyTelephone = params['telephone']?.toString();
+            companyLogo = params['logo_url']?.toString() ?? params['logo']?.toString();
+            companyEmail = params['email_contact']?.toString();
+            companyContact = params['contact']?.toString();
+            companyRccm = params['rccm']?.toString();
+            companyIdNat = params['id_nat']?.toString();
+            companyNif = params['nif']?.toString();
+            companyAccount = params['numero_compte']?.toString();
           }
 
           if (vente is Map<String, dynamic>) {
@@ -467,6 +481,13 @@ class _CreateSalePageState extends State<CreateSalePage> {
               companyName: companyName,
               companyAddress: companyAddress,
               companyTelephone: companyTelephone,
+              companyLogo: companyLogo,
+              companyEmail: companyEmail,
+              companyContact: companyContact,
+              companyRccm: companyRccm,
+              companyIdNat: companyIdNat,
+              companyNif: companyNif,
+              companyAccount: companyAccount,
               produitsCumules: produitsCumules,
               caPeriode: caPeriode,
               ristourneTaux: ristourneTaux,
