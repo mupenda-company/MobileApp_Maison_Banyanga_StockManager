@@ -309,6 +309,7 @@ class _CreateSalePageState extends State<CreateSalePage> {
 
       String clientNom = 'Client';
       String? clientTelephone;
+      String? clientNumero;
       String? zoneNom;
 
       String? companyName;
@@ -358,6 +359,7 @@ class _CreateSalePageState extends State<CreateSalePage> {
           if (vente is Map<String, dynamic>) {
             clientNom = vente['client_nom']?.toString() ?? clientNom;
             clientTelephone = vente['client_telephone']?.toString();
+            clientNumero = vente['client_numero']?.toString();
             zoneNom = vente['zone_nom']?.toString();
 
             final cbn = '${vente['created_by_prenom'] ?? ''} ${vente['created_by_nom'] ?? ''}'.trim();
@@ -476,6 +478,7 @@ class _CreateSalePageState extends State<CreateSalePage> {
               date: dateFacture,
               clientNom: clientNom,
               clientTelephone: clientTelephone,
+              clientNumero: clientNumero,
               zoneNom: zoneNom,
               devise: _devise,
               companyName: companyName,

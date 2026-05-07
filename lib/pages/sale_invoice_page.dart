@@ -26,6 +26,7 @@ class SaleInvoicePage extends StatefulWidget {
   final DateTime date;
   final String clientNom;
   final String? clientTelephone;
+  final String? clientNumero;
   final String? zoneNom;
   final String devise;
 
@@ -60,6 +61,7 @@ class SaleInvoicePage extends StatefulWidget {
     required this.date,
     required this.clientNom,
     this.clientTelephone,
+    this.clientNumero,
     this.zoneNom,
     required this.devise,
     this.companyName,
@@ -159,6 +161,7 @@ class _SaleInvoicePageState extends State<SaleInvoicePage> {
           final compte = widget.companyAccount?.trim();
 
           final clientTel = widget.clientTelephone?.trim();
+          final clientNumero = widget.clientNumero?.trim();
           final zone = widget.zoneNom?.trim();
           final totalCaisses = widget.lignes.fold<double>(0, (sum, line) => sum + line.caisses);
 
@@ -206,8 +209,9 @@ class _SaleInvoicePageState extends State<SaleInvoicePage> {
                 ),
                 pw.SizedBox(height: 10),
                 pw.Text('Client: ${widget.clientNom}', style: pw.TextStyle(fontWeight: pw.FontWeight.bold)),
-                if (clientTel != null && clientTel.isNotEmpty) pw.Text('Numéro: $clientTel'),
+                if (clientTel != null && clientTel.isNotEmpty) pw.Text('Téléphone: $clientTel'),
                 if (zone != null && zone.isNotEmpty) pw.Text('Zone: $zone'),
+                if (clientNumero != null && clientNumero.isNotEmpty) pw.Text('N° client: $clientNumero'),
                 if (widget.produitsCumules != null && widget.produitsCumules! > 0)
                   pw.Text(
                     widget.ristourneInfoPresent
