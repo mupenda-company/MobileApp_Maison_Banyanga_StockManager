@@ -54,6 +54,7 @@ class SaleInvoicePage extends StatefulWidget {
   final double totalTtc;
 
   final List<SaleInvoiceLine> lignes;
+  final bool autoPrint;
 
   const SaleInvoicePage({
     super.key,
@@ -85,6 +86,7 @@ class SaleInvoicePage extends StatefulWidget {
     required this.totalTtc,
     required this.lignes,
     this.numeroFacture,
+    this.autoPrint = true,
   });
 
   @override
@@ -145,7 +147,7 @@ class _SaleInvoicePageState extends State<SaleInvoicePage> {
     doc.addPage(
       pw.Page(
         pageFormat: format,
-        margin: const pw.EdgeInsets.all(12),
+        margin: const pw.EdgeInsets.all(8),
         build: (context) {
           final company = (widget.companyName == null || widget.companyName!.trim().isEmpty)
               ? 'Bralima Logistique'
@@ -305,36 +307,15 @@ class _SaleInvoicePageState extends State<SaleInvoicePage> {
 
   Future<void> _print() async {
     await Printing.layoutPdf(
-      onLayout: (format) => _buildPdf(PdfPageFormat.a6),
+      onLayout: _buildPdf,
       name: widget.numeroFacture == null || widget.numeroFacture!.isEmpty ? 'facture_${widget.venteId}.pdf' : '${widget.numeroFacture}.pdf',
-    );
-  }
-
-  pw.Widget _tableHeader(String text) {
-    return pw.Padding(
-      padding: const pw.EdgeInsets.symmetric(vertical: 6, horizontal: 4),
-      child: pw.Text(text, style: pw.TextStyle(fontWeight: pw.FontWeight.bold, fontSize: 8.5)),
-    );
-  }
-
-  pw.Widget _tableCell(String text, {bool bold = false, pw.Alignment align = pw.Alignment.centerLeft}) {
-    return pw.Container(
-      alignment: align,
-      padding: const pw.EdgeInsets.symmetric(vertical: 5, horizontal: 4),
-      child: pw.Text(
-        text,
-        style: pw.TextStyle(
-          fontSize: 8.5,
-          fontWeight: bold ? pw.FontWeight.bold : pw.FontWeight.normal,
-        ),
-      ),
     );
   }
 
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
-    if (_autoPrintDone) return;
+    if (_autoPrintDone || !widget.autoPrint) return;
     _autoPrintDone = true;
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _print();
@@ -362,7 +343,7 @@ class _SaleInvoicePageState extends State<SaleInvoicePage> {
         ),
         body: PdfPreview(
           canChangePageFormat: false,
-          initialPageFormat: PdfPageFormat.a6,
+          initialPageFormat: PdfPageFormat.a5,
           build: _buildPdf,
         ),
       ),

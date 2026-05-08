@@ -20,6 +20,7 @@ class _CreateSalePageState extends State<CreateSalePage> {
 
   List<Map<String, dynamic>> _clients = const [];
   List<Map<String, dynamic>> _stock = const [];
+  List<Map<String, dynamic>> _recentSales = const [];
 
   String? _clientId;
   String _clientSearch = '';
@@ -179,9 +180,24 @@ class _CreateSalePageState extends State<CreateSalePage> {
         });
       }
 
+      List<Map<String, dynamic>> mappedSales = [];
+      try {
+        final salesResp = await client.getJson('${AppConfig.salesPath}?mission_id=$missionId');
+        final salesList = salesResp is List
+            ? salesResp
+            : (salesResp is Map<String, dynamic> && salesResp['data'] is List ? salesResp['data'] as List : null);
+
+        for (final s in (salesList ?? const [])) {
+          if (s is Map<String, dynamic>) mappedSales.add(s);
+        }
+      } catch (_) {
+        mappedSales = [];
+      }
+
       setState(() {
         _clients = mappedClients;
         _stock = mappedStock;
+        _recentSales = mappedSales;
       });
     } on ApiException catch (e) {
       setState(() {
@@ -212,6 +228,18 @@ class _CreateSalePageState extends State<CreateSalePage> {
 
       final prixCaisseBase = _prixCaisseBase(item);
       total += qtyCs * prixCaisseBase;
+    }
+    return total;
+  }
+
+  double get _totalCaisses {
+    double total = 0;
+    for (final item in _stock) {
+      final id = int.tryParse(item['id']?.toString() ?? '');
+      if (id == null) continue;
+
+      final qtyCsText = _qtyCsControllers[id]?.text ?? '0';
+      total += double.tryParse(qtyCsText.replaceAll(',', '.')) ?? 0;
     }
     return total;
   }
@@ -533,6 +561,7 @@ class _CreateSalePageState extends State<CreateSalePage> {
   @override
   Widget build(BuildContext context) {
     final totalDisplay = _toDisplay(_totalBase);
+    final totalCaisses = _totalCaisses;
 
     final scheme = Theme.of(context).colorScheme;
 
@@ -643,6 +672,11 @@ class _CreateSalePageState extends State<CreateSalePage> {
                                     _fmtAmount(totalDisplay),
                                     style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w700),
                                   ),
+                                  const SizedBox(height: 4),
+                                  Text(
+                                    'Caisses totales: ${totalCaisses.toStringAsFixed(1)} cs',
+                                    style: Theme.of(context).textTheme.bodySmall?.copyWith(color: scheme.onSurfaceVariant),
+                                  ),
                                 ],
                               ),
                             ),
@@ -687,10 +721,27 @@ class _CreateSalePageState extends State<CreateSalePage> {
                                     final btlParCs = _btlParCaisse(item);
                                     final stockActuelDisplay = stockActuelCs > 0 ? stockActuelCs : (stockActuelAlias > 0 ? stockActuelAlias : (_asDouble(item['stock_actuel_bouteilles']) / btlParCs));
                                     final prixCaisseDisplay = _toDisplay(_prixCaisseBase(item));
+                                    final id = int.tryParse(item['id']?.toString() ?? '');
+                                    final qtyCsText = id == null ? '0' : (_qtyCsControllers[id]?.text ?? '0');
+                                    final qtyCs = _asDouble(qtyCsText.replaceAll(',', '.'));
+                                    final totalLigne = qtyCs * prixCaisseDisplay;
 
-                                    return Text(
-                                      'Stock: ${stockActuelDisplay.toStringAsFixed(1)} cs  |  Prix caisse: ${_fmtAmount(prixCaisseDisplay)}',
-                                      style: Theme.of(context).textTheme.bodySmall?.copyWith(color: scheme.onSurfaceVariant),
+                                    return Column(
+                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      children: [
+                                        Text(
+                                          'Stock: ${stockActuelDisplay.toStringAsFixed(1)} cs  |  Prix caisse: ${_fmtAmount(prixCaisseDisplay)}',
+                                          style: Theme.of(context).textTheme.bodySmall?.copyWith(color: scheme.onSurfaceVariant),
+                                        ),
+                                        const SizedBox(height: 2),
+                                        Text(
+                                          'Caisses saisies: ${qtyCs.toStringAsFixed(1)} cs  |  Total ligne: ${_fmtAmount(totalLigne)}',
+                                          style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                                                color: scheme.primary,
+                                                fontWeight: FontWeight.w600,
+                                              ),
+                                        ),
+                                      ],
                                     );
                                   },
                                 ),
@@ -718,6 +769,75 @@ class _CreateSalePageState extends State<CreateSalePage> {
                   ),
                 ),
               const SizedBox(height: 6),
+              const SizedBox(height: 8),
+              Text(
+                'Historique des ventes récentes',
+                style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700),
+              ),
+              const SizedBox(height: 8),
+              Card(
+                child: Padding(
+                  padding: const EdgeInsets.all(12),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      if (_recentSales.isEmpty)
+                        Text(
+                          'Aucune vente récente.',
+                          style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: scheme.onSurfaceVariant),
+                        )
+                      else
+                        for (final sale in _recentSales.take(5))
+                          Padding(
+                            padding: const EdgeInsets.only(bottom: 10),
+                            child: Container(
+                              padding: const EdgeInsets.all(12),
+                              decoration: BoxDecoration(
+                                color: scheme.surface,
+                                borderRadius: BorderRadius.circular(16),
+                                border: Border.all(color: scheme.outlineVariant),
+                              ),
+                              child: Row(
+                                children: [
+                                  Container(
+                                    width: 40,
+                                    height: 40,
+                                    decoration: BoxDecoration(
+                                      color: scheme.primaryContainer,
+                                      borderRadius: BorderRadius.circular(12),
+                                    ),
+                                    child: Icon(Icons.receipt_long, color: scheme.onPrimaryContainer, size: 20),
+                                  ),
+                                  const SizedBox(width: 10),
+                                  Expanded(
+                                    child: Column(
+                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      children: [
+                                        Text(
+                                          (sale['numero_facture'] ?? sale['reference'] ?? 'Vente').toString(),
+                                          style: const TextStyle(fontWeight: FontWeight.w700),
+                                        ),
+                                        const SizedBox(height: 2),
+                                        Text(
+                                          '${(sale['client_nom'] ?? 'Client').toString()} · Caisses: ${(sale['caisses_vendues'] ?? 0).toString()}',
+                                          style: Theme.of(context).textTheme.bodySmall?.copyWith(color: scheme.onSurfaceVariant),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                  const SizedBox(width: 10),
+                                  Text(
+                                    _fmtAmount(_toDisplay(_asDouble(sale['total_ttc']))),
+                                    style: const TextStyle(fontWeight: FontWeight.w700),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                    ],
+                  ),
+                ),
+              ),
             ],
           ),
         ),
