@@ -725,12 +725,13 @@ class _CreateSalePageState extends State<CreateSalePage> {
                                     final qtyCsText = id == null ? '0' : (_qtyCsControllers[id]?.text ?? '0');
                                     final qtyCs = _asDouble(qtyCsText.replaceAll(',', '.'));
                                     final totalLigne = qtyCs * prixCaisseDisplay;
+                                    final stockInsuffisant = qtyCs > stockActuelDisplay;
 
                                     return Column(
                                       crossAxisAlignment: CrossAxisAlignment.start,
                                       children: [
                                         Text(
-                                          'Stock: ${stockActuelDisplay.toStringAsFixed(1)} cs  |  Prix caisse: ${_fmtAmount(prixCaisseDisplay)}',
+                                          'Stock mission disponible: ${stockActuelDisplay.toStringAsFixed(1)} cs  |  Prix caisse: ${_fmtAmount(prixCaisseDisplay)}',
                                           style: Theme.of(context).textTheme.bodySmall?.copyWith(color: scheme.onSurfaceVariant),
                                         ),
                                         const SizedBox(height: 2),
@@ -741,6 +742,16 @@ class _CreateSalePageState extends State<CreateSalePage> {
                                                 fontWeight: FontWeight.w600,
                                               ),
                                         ),
+                                        if (stockInsuffisant) ...[
+                                          const SizedBox(height: 2),
+                                          Text(
+                                            'Stock mission insuffisant: ${qtyCs.toStringAsFixed(1)} cs demandées / ${stockActuelDisplay.toStringAsFixed(1)} cs disponibles',
+                                            style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                                                  color: scheme.error,
+                                                  fontWeight: FontWeight.w700,
+                                                ),
+                                          ),
+                                        ],
                                       ],
                                     );
                                   },

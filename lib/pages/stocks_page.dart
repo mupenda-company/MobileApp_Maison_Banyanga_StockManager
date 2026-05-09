@@ -131,11 +131,27 @@ class _StocksPageState extends State<StocksPage> {
     );
   }
 
+  double _stockCases(Map<String, dynamic> item) {
+    final cases = (item['stock_actuel_caisses'] ?? item['stock_caisses_pleine'] ?? item['caisses_pleine'] ?? 0);
+    final casesValue = cases is num ? cases.toDouble() : double.tryParse(cases.toString().replaceAll(',', '.')) ?? 0;
+    if (casesValue > 0) {
+      return casesValue;
+    }
+
+    final bottles = (item['stock_actuel_bouteilles'] ?? item['stock_plein'] ?? item['quantite_pleine'] ?? item['stock'] ?? 0);
+    final bottlesValue = bottles is num ? bottles.toDouble() : double.tryParse(bottles.toString().replaceAll(',', '.')) ?? 0;
+    final bottlesPerCase = double.tryParse((item['bouteilles_par_caisses'] ?? 24).toString().replaceAll(',', '.')) ?? 24;
+    if (bottlesPerCase <= 0) {
+      return bottlesValue;
+    }
+
+    return bottlesValue / bottlesPerCase;
+  }
+
   Widget _stockCard(Map<String, dynamic> item, ColorScheme scheme) {
     final name = (item['nom'] ?? item['name'] ?? item['product'] ?? 'Produit').toString();
     final emplacement = (item['emplacement_nom'] ?? item['location'] ?? item['emplacement'] ?? 'Emplacement').toString();
-    final quantite = (item['stock_actuel_caisses'] ?? item['stock_actuel'] ?? item['quantity'] ?? item['qty'] ?? item['stock'] ?? 0).toString();
-    final rawQty = double.tryParse(quantite.replaceAll(',', '.')) ?? 0;
+    final rawQty = _stockCases(item);
     final isLow = rawQty <= 0;
 
     return Container(
@@ -208,7 +224,7 @@ class _StocksPageState extends State<StocksPage> {
                       Icon(Icons.local_shipping_outlined, size: 16, color: scheme.onSurfaceVariant),
                       const SizedBox(width: 6),
                       Text(
-                        '$quantite cs',
+                        '${rawQty.toStringAsFixed(1)} cs',
                         style: TextStyle(
                           color: scheme.onSurfaceVariant,
                           fontWeight: FontWeight.w600,
@@ -231,8 +247,7 @@ class _StocksPageState extends State<StocksPage> {
     final stocksCount = _stocks.length;
     final totalQuantity = _stocks.fold<double>(0, (sum, item) {
       if (item is Map<String, dynamic>) {
-        final raw = item['stock_actuel_caisses'] ?? item['stock_actuel'] ?? item['quantity'] ?? item['qty'] ?? item['stock'] ?? 0;
-        return sum + (raw is num ? raw.toDouble() : double.tryParse(raw.toString().replaceAll(',', '.')) ?? 0);
+        return sum + _stockCases(item);
       }
       return sum;
     });
