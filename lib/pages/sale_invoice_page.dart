@@ -9,12 +9,16 @@ import 'package:printing/printing.dart';
 class SaleInvoiceLine {
   final String produitNom;
   final double caisses;
+  final double caissesVidesRecues;
+  final double detteCaisses;
   final double prixCaisse;
   final double sousTotal;
 
   const SaleInvoiceLine({
     required this.produitNom,
     required this.caisses,
+    required this.caissesVidesRecues,
+    required this.detteCaisses,
     required this.prixCaisse,
     required this.sousTotal,
   });
@@ -166,6 +170,8 @@ class _SaleInvoicePageState extends State<SaleInvoicePage> {
           final clientNumero = widget.clientNumero?.trim();
           final zone = widget.zoneNom?.trim();
           final totalCaisses = widget.lignes.fold<double>(0, (sum, line) => sum + line.caisses);
+          final totalEmballagesRecus = widget.lignes.fold<double>(0, (sum, line) => sum + line.caissesVidesRecues);
+          final totalDetteEmballages = widget.lignes.fold<double>(0, (sum, line) => sum + line.detteCaisses);
 
           final hasRistourne = (widget.ristourneMontant != null && widget.ristourneMontant!.abs() > 0) ||
               (widget.ristourneTaux != null && widget.ristourneTaux!.abs() > 0);
@@ -246,7 +252,7 @@ class _SaleInvoicePageState extends State<SaleInvoicePage> {
                         pw.Row(
                           mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
                           children: [
-                            pw.Text(''),
+                            pw.Text('Vides: ${l.caissesVidesRecues.toStringAsFixed(1)} cs / Dette: ${l.detteCaisses.toStringAsFixed(1)} cs', style: const pw.TextStyle(fontSize: 8)),
                             pw.Text(_fmtAmount(l.sousTotal), style: pw.TextStyle(fontWeight: pw.FontWeight.bold)),
                           ],
                         ),
@@ -261,6 +267,22 @@ class _SaleInvoicePageState extends State<SaleInvoicePage> {
                   children: [
                     pw.Text('Total caisses achetées:'),
                     pw.Text('${totalCaisses.toStringAsFixed(1)} cs', style: pw.TextStyle(fontWeight: pw.FontWeight.bold)),
+                  ],
+                ),
+                pw.SizedBox(height: 2),
+                pw.Row(
+                  mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+                  children: [
+                    pw.Text('Emballages reçus:'),
+                    pw.Text('${totalEmballagesRecus.toStringAsFixed(1)} cs', style: pw.TextStyle(fontWeight: pw.FontWeight.bold)),
+                  ],
+                ),
+                pw.SizedBox(height: 2),
+                pw.Row(
+                  mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+                  children: [
+                    pw.Text('Dette emballages:'),
+                    pw.Text('${totalDetteEmballages.toStringAsFixed(1)} cs', style: pw.TextStyle(fontWeight: pw.FontWeight.bold)),
                   ],
                 ),
                 pw.SizedBox(height: 2),

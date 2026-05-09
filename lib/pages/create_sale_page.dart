@@ -26,11 +26,15 @@ class _CreateSalePageState extends State<CreateSalePage> {
   String _clientSearch = '';
 
   final Map<int, TextEditingController> _qtyCsControllers = {};
+  final Map<int, TextEditingController> _qtyEmptyControllers = {};
   final TextEditingController _notesController = TextEditingController();
 
   @override
   void dispose() {
     for (final c in _qtyCsControllers.values) {
+      c.dispose();
+    }
+    for (final c in _qtyEmptyControllers.values) {
       c.dispose();
     }
     _notesController.dispose();
@@ -178,6 +182,13 @@ class _CreateSalePageState extends State<CreateSalePage> {
           });
           return c;
         });
+        _qtyEmptyControllers.putIfAbsent(id, () {
+          final c = TextEditingController(text: '0');
+          c.addListener(() {
+            if (mounted) setState(() {});
+          });
+          return c;
+        });
       }
 
       List<Map<String, dynamic>> mappedSales = [];
@@ -232,6 +243,41 @@ class _CreateSalePageState extends State<CreateSalePage> {
     return total;
   }
 
+  double get _totalEmballagesRecus {
+    double total = 0;
+    for (final item in _stock) {
+      final id = int.tryParse(item['id']?.toString() ?? '');
+      if (id == null) continue;
+
+      final qtyCsText = _qtyCsControllers[id]?.text ?? '0';
+      final qtyCs = double.tryParse(qtyCsText.replaceAll(',', '.')) ?? 0;
+      if (qtyCs <= 0) continue;
+
+      final qtyEmptyText = _qtyEmptyControllers[id]?.text ?? '0';
+      final qtyEmptyInput = double.tryParse(qtyEmptyText.replaceAll(',', '.')) ?? 0;
+      total += qtyEmptyInput > qtyCs ? qtyCs : qtyEmptyInput;
+    }
+    return total;
+  }
+
+  double get _totalDetteEmballages {
+    double total = 0;
+    for (final item in _stock) {
+      final id = int.tryParse(item['id']?.toString() ?? '');
+      if (id == null) continue;
+
+      final qtyCsText = _qtyCsControllers[id]?.text ?? '0';
+      final qtyCs = double.tryParse(qtyCsText.replaceAll(',', '.')) ?? 0;
+      if (qtyCs <= 0) continue;
+
+      final qtyEmptyText = _qtyEmptyControllers[id]?.text ?? '0';
+      final qtyEmptyInput = double.tryParse(qtyEmptyText.replaceAll(',', '.')) ?? 0;
+      final qtyEmpty = qtyEmptyInput > qtyCs ? qtyCs : qtyEmptyInput;
+      total += qtyCs - qtyEmpty;
+    }
+    return total;
+  }
+
   double get _totalCaisses {
     double total = 0;
     for (final item in _stock) {
@@ -280,6 +326,10 @@ class _CreateSalePageState extends State<CreateSalePage> {
       final qtyCs = double.tryParse(qtyCsText.replaceAll(',', '.')) ?? 0;
       if (qtyCs <= 0) continue;
 
+      final qtyEmptyText = _qtyEmptyControllers[id]?.text ?? '0';
+      final qtyEmptyInput = double.tryParse(qtyEmptyText.replaceAll(',', '.')) ?? 0;
+      final qtyEmpty = qtyEmptyInput > qtyCs ? qtyCs : qtyEmptyInput;
+
       final btlParCs = _btlParCaisse(item);
       final qtyBtl = qtyCs * btlParCs;
       final prixCaisseBase = _prixCaisseBase(item);
@@ -289,6 +339,7 @@ class _CreateSalePageState extends State<CreateSalePage> {
         'produit_id': id,
         'quantite': qtyBtl,
         'quantite_caisses': qtyCs,
+        'caisses_vides_recues': qtyEmpty,
         'prix_caisse': prixCaisseDisplay,
         'prix_unitaire': prixCaisseDisplay / btlParCs,
       });
@@ -409,6 +460,8 @@ class _CreateSalePageState extends State<CreateSalePage> {
                 final btlParCs = _asDouble(d['bouteilles_par_caisses']);
                 final denom = btlParCs <= 0 ? 24 : btlParCs;
                 final caisses = _asDouble(d['quantite_caisses']) > 0 ? _asDouble(d['quantite_caisses']) : (quantite / denom);
+                final caissesVidesRecues = _asDouble(d['caisses_vides_recues']);
+                final detteCaisses = caisses - caissesVidesRecues;
 
                 final prixCaisseBase = _asDouble(d['prix_caisse']) > 0
                     ? _asDouble(d['prix_caisse'])
@@ -419,6 +472,8 @@ class _CreateSalePageState extends State<CreateSalePage> {
                   SaleInvoiceLine(
                     produitNom: d['produit_nom']?.toString() ?? 'Produit',
                     caisses: caisses,
+                    caissesVidesRecues: caissesVidesRecues,
+                    detteCaisses: detteCaisses < 0 ? 0 : detteCaisses,
                     prixCaisse: _toDisplay(prixCaisseBase),
                     sousTotal: _toDisplay(sousTotalBase),
                   ),
@@ -481,11 +536,14 @@ class _CreateSalePageState extends State<CreateSalePage> {
           final puBase = _asDouble(item['prix_vente_unitaire']);
           final prixCaisseBase = puBase * btlParCs;
           final sousTotalBase = (qtyCs * btlParCs) * puBase;
+          final qtyEmpty = _asDouble(item['caisses_vides_recues']);
 
           lignes.add(
             SaleInvoiceLine(
               produitNom: (item['nom'] ?? 'Produit').toString(),
               caisses: qtyCs,
+              caissesVidesRecues: qtyEmpty,
+              detteCaisses: qtyCs - qtyEmpty < 0 ? 0 : qtyCs - qtyEmpty,
               prixCaisse: _toDisplay(prixCaisseBase),
               sousTotal: _toDisplay(sousTotalBase),
             ),
@@ -562,6 +620,8 @@ class _CreateSalePageState extends State<CreateSalePage> {
   Widget build(BuildContext context) {
     final totalDisplay = _toDisplay(_totalBase);
     final totalCaisses = _totalCaisses;
+    final totalEmballagesRecus = _totalEmballagesRecus;
+    final totalDetteEmballages = _totalDetteEmballages;
 
     final scheme = Theme.of(context).colorScheme;
 
@@ -677,6 +737,11 @@ class _CreateSalePageState extends State<CreateSalePage> {
                                     'Caisses totales: ${totalCaisses.toStringAsFixed(1)} cs',
                                     style: Theme.of(context).textTheme.bodySmall?.copyWith(color: scheme.onSurfaceVariant),
                                   ),
+                                  const SizedBox(height: 4),
+                                  Text(
+                                    'Emballages reçus: ${totalEmballagesRecus.toStringAsFixed(1)} cs  |  Dette: ${totalDetteEmballages.toStringAsFixed(1)} cs',
+                                    style: Theme.of(context).textTheme.bodySmall?.copyWith(color: scheme.onSurfaceVariant),
+                                  ),
                                 ],
                               ),
                             ),
@@ -724,8 +789,12 @@ class _CreateSalePageState extends State<CreateSalePage> {
                                     final id = int.tryParse(item['id']?.toString() ?? '');
                                     final qtyCsText = id == null ? '0' : (_qtyCsControllers[id]?.text ?? '0');
                                     final qtyCs = _asDouble(qtyCsText.replaceAll(',', '.'));
+                                    final qtyEmptyText = id == null ? '0' : (_qtyEmptyControllers[id]?.text ?? '0');
+                                    final qtyEmptyInput = _asDouble(qtyEmptyText.replaceAll(',', '.'));
+                                    final qtyEmpty = qtyEmptyInput > qtyCs ? qtyCs : qtyEmptyInput;
                                     final totalLigne = qtyCs * prixCaisseDisplay;
                                     final stockInsuffisant = qtyCs > stockActuelDisplay;
+                                    final detteEmballages = qtyCs - qtyEmpty;
 
                                     return Column(
                                       crossAxisAlignment: CrossAxisAlignment.start,
@@ -739,6 +808,14 @@ class _CreateSalePageState extends State<CreateSalePage> {
                                           'Caisses saisies: ${qtyCs.toStringAsFixed(1)} cs  |  Total ligne: ${_fmtAmount(totalLigne)}',
                                           style: Theme.of(context).textTheme.bodySmall?.copyWith(
                                                 color: scheme.primary,
+                                                fontWeight: FontWeight.w600,
+                                              ),
+                                        ),
+                                        const SizedBox(height: 2),
+                                        Text(
+                                          'Emballages reçus: ${qtyEmpty.toStringAsFixed(1)} cs  |  Dette: ${detteEmballages.toStringAsFixed(1)} cs',
+                                          style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                                                color: scheme.onSurfaceVariant,
                                                 fontWeight: FontWeight.w600,
                                               ),
                                         ),
@@ -761,17 +838,33 @@ class _CreateSalePageState extends State<CreateSalePage> {
                           ),
                           const SizedBox(width: 10),
                           SizedBox(
-                            width: 110,
-                            child: TextField(
-                              controller: () {
-                                final id = int.tryParse(item['id']?.toString() ?? '');
-                                return id == null ? null : _qtyCsControllers[id];
-                              }(),
-                              enabled: !_saving,
-                              keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                              decoration: const InputDecoration(
-                                labelText: 'Cs',
-                              ),
+                            width: 120,
+                            child: Column(
+                              children: [
+                                TextField(
+                                  controller: () {
+                                    final id = int.tryParse(item['id']?.toString() ?? '');
+                                    return id == null ? null : _qtyCsControllers[id];
+                                  }(),
+                                  enabled: !_saving,
+                                  keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                                  decoration: const InputDecoration(
+                                    labelText: 'Caisses',
+                                  ),
+                                ),
+                                const SizedBox(height: 8),
+                                TextField(
+                                  controller: () {
+                                    final id = int.tryParse(item['id']?.toString() ?? '');
+                                    return id == null ? null : _qtyEmptyControllers[id];
+                                  }(),
+                                  enabled: !_saving,
+                                  keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                                  decoration: const InputDecoration(
+                                    labelText: 'Vides',
+                                  ),
+                                ),
+                              ],
                             ),
                           ),
                         ],
