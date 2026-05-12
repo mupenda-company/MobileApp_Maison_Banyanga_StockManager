@@ -151,7 +151,7 @@ class _SaleInvoicePageState extends State<SaleInvoicePage> {
     doc.addPage(
       pw.Page(
         pageFormat: format,
-        margin: const pw.EdgeInsets.all(10),
+        margin: const pw.EdgeInsets.all(12),
         build: (context) {
           final company = (widget.companyName == null || widget.companyName!.trim().isEmpty)
               ? 'Bralima Logistique'
@@ -177,7 +177,7 @@ class _SaleInvoicePageState extends State<SaleInvoicePage> {
               (widget.ristourneTaux != null && widget.ristourneTaux!.abs() > 0);
 
           return pw.DefaultTextStyle(
-            style: const pw.TextStyle(fontSize: 12),
+            style: const pw.TextStyle(fontSize: 13),
             child: pw.Column(
               crossAxisAlignment: pw.CrossAxisAlignment.stretch,
               children: [
@@ -186,8 +186,8 @@ class _SaleInvoicePageState extends State<SaleInvoicePage> {
                     children: [
                       if (logoImage != null)
                         pw.Container(
-                          width: 58,
-                          height: 58,
+                          width: 64,
+                          height: 64,
                           margin: const pw.EdgeInsets.only(bottom: 6),
                           child: pw.ClipRRect(
                             horizontalRadius: 8,
@@ -195,7 +195,7 @@ class _SaleInvoicePageState extends State<SaleInvoicePage> {
                             child: pw.Image(logoImage, fit: pw.BoxFit.cover),
                           ),
                         ),
-                      pw.Text(company.toUpperCase(), style: pw.TextStyle(fontSize: 16, fontWeight: pw.FontWeight.bold)),
+                      pw.Text(company.toUpperCase(), style: pw.TextStyle(fontSize: 18, fontWeight: pw.FontWeight.bold)),
                       if (adresse != null && adresse.isNotEmpty) pw.Text(adresse, style: const pw.TextStyle(fontSize: 10)),
                       if (telSociete != null && telSociete.isNotEmpty) pw.Text('Tél: $telSociete', style: const pw.TextStyle(fontSize: 10)),
                       if (email != null && email.isNotEmpty) pw.Text('Email: $email', style: const pw.TextStyle(fontSize: 10)),
@@ -207,7 +207,7 @@ class _SaleInvoicePageState extends State<SaleInvoicePage> {
                       pw.SizedBox(height: 6),
                       pw.Divider(thickness: 1),
                       pw.SizedBox(height: 4),
-                      pw.Text(title, style: pw.TextStyle(fontWeight: pw.FontWeight.bold)),
+                      pw.Text(title, style: pw.TextStyle(fontWeight: pw.FontWeight.bold, fontSize: 13)),
                       pw.SizedBox(height: 2),
                       pw.Text(
                         '${widget.date.day.toString().padLeft(2, '0')}/${widget.date.month.toString().padLeft(2, '0')}/${widget.date.year} ${widget.date.hour.toString().padLeft(2, '0')}:${widget.date.minute.toString().padLeft(2, '0')}',
@@ -217,22 +217,21 @@ class _SaleInvoicePageState extends State<SaleInvoicePage> {
                   ),
                 ),
                 pw.SizedBox(height: 10),
-                pw.Text('Client: ${widget.clientNom}', style: pw.TextStyle(fontWeight: pw.FontWeight.bold, fontSize: 13)),
-                if (clientTel != null && clientTel.isNotEmpty) pw.Text('Téléphone: $clientTel', style: const pw.TextStyle(fontSize: 11)),
-                if (zone != null && zone.isNotEmpty) pw.Text('Zone: $zone', style: const pw.TextStyle(fontSize: 11)),
-                if (clientNumero != null && clientNumero.isNotEmpty) pw.Text('N° client: $clientNumero', style: const pw.TextStyle(fontSize: 11)),
+                pw.Text('Client: ${widget.clientNom}', style: pw.TextStyle(fontWeight: pw.FontWeight.bold, fontSize: 14)),
+                if (clientTel != null && clientTel.isNotEmpty) pw.Text('Téléphone: $clientTel', style: const pw.TextStyle(fontSize: 12)),
+                if (zone != null && zone.isNotEmpty) pw.Text('Zone: $zone', style: const pw.TextStyle(fontSize: 12)),
+                if (clientNumero != null && clientNumero.isNotEmpty) pw.Text('N° client: $clientNumero', style: const pw.TextStyle(fontSize: 12)),
                 if (widget.produitsCumules != null && widget.produitsCumules! > 0)
                   pw.Text(
                     widget.ristourneInfoPresent
                         ? 'Produits cumulés (période): ${widget.produitsCumules!.toStringAsFixed(1)} cs'
                         : 'Produits cumulés: ${widget.produitsCumules!.toStringAsFixed(1)} cs',
-                    style: const pw.TextStyle(fontSize: 11),
+                    style: const pw.TextStyle(fontSize: 12),
                   ),
-                if (widget.caPeriode != null && widget.caPeriode! > 0) pw.Text('CA (période): ${_fmtAmount(widget.caPeriode!)}', style: const pw.TextStyle(fontSize: 11)),
                 if (hasRistourne)
                   pw.Text(
                     'Ristourne: ${(widget.ristourneTaux ?? 0).toStringAsFixed(2)}% (${_fmtAmount(widget.ristourneMontant ?? 0)})',
-                    style: const pw.TextStyle(fontSize: 11),
+                    style: const pw.TextStyle(fontSize: 12),
                   ),
                 pw.SizedBox(height: 6),
                 pw.Divider(thickness: 1),
@@ -243,20 +242,20 @@ class _SaleInvoicePageState extends State<SaleInvoicePage> {
                     child: pw.Column(
                       crossAxisAlignment: pw.CrossAxisAlignment.start,
                       children: [
-                        pw.Text(l.produitNom, style: pw.TextStyle(fontWeight: pw.FontWeight.bold, fontSize: 12)),
+                        pw.Text(l.produitNom, style: pw.TextStyle(fontWeight: pw.FontWeight.bold, fontSize: 13)),
                         pw.SizedBox(height: 2),
                         pw.Row(
                           mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
                           children: [
-                            pw.Text('${l.caisses.toStringAsFixed(1)} cs', style: const pw.TextStyle(fontSize: 11)),
-                            pw.Text(_fmtAmount(l.prixCaisse), style: pw.TextStyle(fontWeight: pw.FontWeight.bold, fontSize: 11)),
+                            pw.Text('${l.caisses.toStringAsFixed(1)} cs', style: const pw.TextStyle(fontSize: 12)),
+                            pw.Text(_fmtAmount(l.prixCaisse), style: pw.TextStyle(fontWeight: pw.FontWeight.bold, fontSize: 12)),
                           ],
                         ),
                         pw.Row(
                           mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
                           children: [
-                            pw.Text('Vides: ${l.caissesVidesRecues.toStringAsFixed(1)} cs / Dette: ${l.detteCaisses.toStringAsFixed(1)} cs', style: const pw.TextStyle(fontSize: 10)),
-                            pw.Text(_fmtAmount(l.sousTotal), style: pw.TextStyle(fontWeight: pw.FontWeight.bold, fontSize: 11)),
+                            pw.Text('Vides: ${l.caissesVidesRecues.toStringAsFixed(1)} cs / Dette: ${l.detteCaisses.toStringAsFixed(1)} cs', style: const pw.TextStyle(fontSize: 11)),
+                            pw.Text(_fmtAmount(l.sousTotal), style: pw.TextStyle(fontWeight: pw.FontWeight.bold, fontSize: 12)),
                           ],
                         ),
                       ],
@@ -268,40 +267,40 @@ class _SaleInvoicePageState extends State<SaleInvoicePage> {
                 pw.Row(
                   mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
                   children: [
-                    pw.Text('Total caisses achetées:', style: const pw.TextStyle(fontSize: 11)),
-                    pw.Text('${totalCaisses.toStringAsFixed(1)} cs', style: pw.TextStyle(fontWeight: pw.FontWeight.bold, fontSize: 11)),
+                    pw.Text('Total caisses achetées:', style: const pw.TextStyle(fontSize: 12)),
+                    pw.Text('${totalCaisses.toStringAsFixed(1)} cs', style: pw.TextStyle(fontWeight: pw.FontWeight.bold, fontSize: 12)),
                   ],
                 ),
                 pw.SizedBox(height: 2),
                 pw.Row(
                   mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
                   children: [
-                    pw.Text('Emballages reçus:', style: const pw.TextStyle(fontSize: 11)),
-                    pw.Text('${totalEmballagesRecus.toStringAsFixed(1)} cs', style: pw.TextStyle(fontWeight: pw.FontWeight.bold, fontSize: 11)),
+                    pw.Text('Emballages reçus:', style: const pw.TextStyle(fontSize: 12)),
+                    pw.Text('${totalEmballagesRecus.toStringAsFixed(1)} cs', style: pw.TextStyle(fontWeight: pw.FontWeight.bold, fontSize: 12)),
                   ],
                 ),
                 pw.SizedBox(height: 2),
                 pw.Row(
                   mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
                   children: [
-                    pw.Text('Dette emballages:', style: const pw.TextStyle(fontSize: 11)),
-                    pw.Text('${totalDetteEmballages.toStringAsFixed(1)} cs', style: pw.TextStyle(fontWeight: pw.FontWeight.bold, fontSize: 11)),
+                    pw.Text('Dette emballages:', style: const pw.TextStyle(fontSize: 12)),
+                    pw.Text('${totalDetteEmballages.toStringAsFixed(1)} cs', style: pw.TextStyle(fontWeight: pw.FontWeight.bold, fontSize: 12)),
                   ],
                 ),
                 pw.SizedBox(height: 2),
                 pw.Row(
                   mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
                   children: [
-                    pw.Text('Total HT:', style: const pw.TextStyle(fontSize: 11)),
-                    pw.Text(_fmtAmount(widget.totalHt), style: const pw.TextStyle(fontSize: 11)),
+                    pw.Text('Total HT:', style: const pw.TextStyle(fontSize: 12)),
+                    pw.Text(_fmtAmount(widget.totalHt), style: const pw.TextStyle(fontSize: 12)),
                   ],
                 ),
                 pw.SizedBox(height: 2),
                 pw.Row(
                   mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
                   children: [
-                    pw.Text('TVA:', style: const pw.TextStyle(fontSize: 11)),
-                    pw.Text(_fmtAmount(widget.totalTva), style: const pw.TextStyle(fontSize: 11)),
+                    pw.Text('TVA:', style: const pw.TextStyle(fontSize: 12)),
+                    pw.Text(_fmtAmount(widget.totalTva), style: const pw.TextStyle(fontSize: 12)),
                   ],
                 ),
                 pw.SizedBox(height: 4),
@@ -311,15 +310,15 @@ class _SaleInvoicePageState extends State<SaleInvoicePage> {
                   child: pw.Row(
                     mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
                     children: [
-                      pw.Text('TOTAL TTC:', style: pw.TextStyle(fontWeight: pw.FontWeight.bold, fontSize: 14)),
-                      pw.Text(_fmtAmount(widget.totalTtc), style: pw.TextStyle(fontWeight: pw.FontWeight.bold, fontSize: 14)),
+                      pw.Text('TOTAL TTC:', style: pw.TextStyle(fontWeight: pw.FontWeight.bold, fontSize: 16)),
+                      pw.Text(_fmtAmount(widget.totalTtc), style: pw.TextStyle(fontWeight: pw.FontWeight.bold, fontSize: 16)),
                     ],
                   ),
                 ),
                 pw.SizedBox(height: 12),
-                pw.Center(child: pw.Text('Merci pour votre confiance !', style: const pw.TextStyle(fontSize: 10))),
+                pw.Center(child: pw.Text('Merci pour votre confiance !', style: const pw.TextStyle(fontSize: 11))),
                 if (widget.vendeurNom != null && widget.vendeurNom!.trim().isNotEmpty)
-                  pw.Center(child: pw.Text('Vendeur: ${widget.vendeurNom!.trim()}', style: const pw.TextStyle(fontSize: 10))),
+                  pw.Center(child: pw.Text('Vendeur: ${widget.vendeurNom!.trim()}', style: const pw.TextStyle(fontSize: 11))),
               ],
             ),
           );
