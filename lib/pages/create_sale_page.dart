@@ -71,6 +71,26 @@ class _CreateSalePageState extends State<CreateSalePage> {
     return '${v.toStringAsFixed(2)} $_devise';
   }
 
+  String get _currentDayLabel {
+    final now = DateTime.now();
+    return '${now.year.toString().padLeft(4, '0')}-${now.month.toString().padLeft(2, '0')}-${now.day.toString().padLeft(2, '0')}';
+  }
+
+  String get _currentDeviceDateTimeLabel {
+    final now = DateTime.now();
+    return '${now.year.toString().padLeft(4, '0')}-${now.month.toString().padLeft(2, '0')}-${now.day.toString().padLeft(2, '0')} '
+        '${now.hour.toString().padLeft(2, '0')}:${now.minute.toString().padLeft(2, '0')}:${now.second.toString().padLeft(2, '0')}';
+  }
+
+  String _formatSaleTime(String? value) {
+    if (value == null || value.trim().isEmpty) return '';
+
+    final parsed = DateTime.tryParse(value.replaceFirst(' ', 'T'));
+    if (parsed == null) return value;
+
+    return '${parsed.hour.toString().padLeft(2, '0')}:${parsed.minute.toString().padLeft(2, '0')}';
+  }
+
   double _asDouble(dynamic value) {
     if (value is num) return value.toDouble();
     return double.tryParse(value?.toString() ?? '') ?? 0;
@@ -91,6 +111,111 @@ class _CreateSalePageState extends State<CreateSalePage> {
 
     final prixUnitaire = _asDouble(item['prix_vente_unitaire']);
     return prixUnitaire * btlParCs;
+  }
+
+  Future<void> _openInvoice(Map<String, dynamic> sale) async {
+    final saleId = int.tryParse(sale['id']?.toString() ?? '');
+    if (saleId == null || saleId <= 0) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Vente invalide')),
+        );
+      }
+      return;
+    }
+
+    try {
+      final client = ApiService.instance.createClient();
+      final resp = await client.getJson('${AppConfig.ventePath}/$saleId/facture');
+      final payload = resp is Map<String, dynamic>
+          ? (resp['data'] is Map<String, dynamic> ? resp['data'] as Map<String, dynamic> : resp)
+          : null;
+
+      final vente = payload?['vente'];
+      final params = payload?['params'];
+      final lines = <SaleInvoiceLine>[];
+
+      if (vente is Map<String, dynamic>) {
+        final details = vente['details'];
+        if (details is List) {
+          for (final d in details) {
+            if (d is! Map<String, dynamic>) continue;
+            final btlParCs = double.tryParse(d['bouteilles_par_caisses']?.toString() ?? '') ?? 24;
+            final denom = btlParCs <= 0 ? 24 : btlParCs;
+            final quantite = double.tryParse(d['quantite']?.toString() ?? '') ?? 0;
+            if (quantite <= 0) continue;
+            final caisses = double.tryParse(d['quantite_caisses']?.toString() ?? '') ?? (quantite / denom);
+            final caissesVidesRecues = double.tryParse(d['caisses_vides_recues']?.toString() ?? '') ?? 0;
+            final prixCaisse = double.tryParse(d['prix_caisse']?.toString() ?? '') ??
+                ((double.tryParse(d['prix_unitaire']?.toString() ?? '') ?? 0) * denom);
+            final sousTotal = double.tryParse(d['sous_total']?.toString() ?? '') ?? 0;
+
+            lines.add(
+              SaleInvoiceLine(
+                produitNom: d['produit_nom']?.toString() ?? 'Produit',
+                caisses: caisses,
+                caissesVidesRecues: caissesVidesRecues,
+                detteCaisses: (caisses - caissesVidesRecues).clamp(0, caisses),
+                prixCaisse: prixCaisse,
+                sousTotal: sousTotal,
+              ),
+            );
+          }
+        }
+      }
+
+      if (vente is! Map<String, dynamic>) {
+        throw Exception('Impossible de charger la facture');
+      }
+
+      if (!mounted) return;
+
+      await Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (context) => SaleInvoicePage(
+            venteId: saleId,
+            numeroFacture: vente['numero_facture']?.toString(),
+            date: DateTime.tryParse((vente['date_vente']?.toString() ?? '').replaceFirst(' ', 'T')) ?? DateTime.now(),
+            clientNom: vente['client_nom']?.toString() ?? 'Client',
+            clientTelephone: vente['client_telephone']?.toString(),
+            clientNumero: vente['client_numero']?.toString(),
+            zoneNom: vente['zone_nom']?.toString(),
+            devise: (params is Map<String, dynamic> && params['devise'] != null)
+                ? params['devise'].toString()
+                : _devise,
+            companyName: params is Map<String, dynamic> ? params['nom_entreprise']?.toString() : null,
+            companyAddress: params is Map<String, dynamic> ? params['adresse']?.toString() : null,
+            companyTelephone: params is Map<String, dynamic> ? params['telephone']?.toString() : null,
+            companyLogo: params is Map<String, dynamic> ? params['logo_url']?.toString() ?? params['logo']?.toString() : null,
+            companyEmail: params is Map<String, dynamic> ? params['email_contact']?.toString() : null,
+            companyContact: params is Map<String, dynamic> ? params['contact']?.toString() : null,
+            companyRccm: params is Map<String, dynamic> ? params['rccm']?.toString() : null,
+            companyIdNat: params is Map<String, dynamic> ? params['id_nat']?.toString() : null,
+            companyNif: params is Map<String, dynamic> ? params['nif']?.toString() : null,
+            companyAccount: params is Map<String, dynamic> ? params['numero_compte']?.toString() : null,
+            produitsCumules: _asDouble(payload?['totalCaissesClient']) > 0 ? _asDouble(payload?['totalCaissesClient']) : null,
+            caPeriode: null,
+            ristourneTaux: double.tryParse((payload?['ristourneInfo'] is Map<String, dynamic>) ? (payload?['ristourneInfo'] as Map<String, dynamic>)['taux_applique']?.toString() ?? '' : ''),
+            ristourneMontant: double.tryParse((payload?['ristourneInfo'] is Map<String, dynamic>) ? (payload?['ristourneInfo'] as Map<String, dynamic>)['montant_ristourne']?.toString() ?? '' : ''),
+            ristourneInfoPresent: payload?['ristourneInfo'] is Map<String, dynamic>,
+            vendeurNom: vente['created_by_prenom'] == null && vente['created_by_nom'] == null
+                ? null
+                : '${vente['created_by_prenom'] ?? ''} ${vente['created_by_nom'] ?? ''}'.trim(),
+            totalHt: _asDouble(vente['total_ht']),
+            totalTva: _asDouble(vente['total_tva']),
+            totalTtc: _asDouble(vente['total_ttc']),
+            lignes: lines,
+            autoPrint: true,
+          ),
+        ),
+      );
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Impression impossible: $e')),
+      );
+    }
   }
 
   String? get _missionId {
@@ -193,7 +318,7 @@ class _CreateSalePageState extends State<CreateSalePage> {
 
       List<Map<String, dynamic>> mappedSales = [];
       try {
-        final salesResp = await client.getJson('${AppConfig.salesPath}?mission_id=$missionId');
+        final salesResp = await client.getJson('${AppConfig.salesPath}?mission_id=$missionId&date=${Uri.encodeComponent(_currentDayLabel)}');
         final salesList = salesResp is List
             ? salesResp
             : (salesResp is Map<String, dynamic> && salesResp['data'] is List ? salesResp['data'] as List : null);
@@ -364,6 +489,7 @@ class _CreateSalePageState extends State<CreateSalePage> {
         'client_id': int.tryParse(_clientId!) ?? _clientId,
         'mission_id': int.tryParse(missionId) ?? missionId,
         'user_id': int.tryParse(userId) ?? userId,
+        'date_vente': _currentDeviceDateTimeLabel,
         'devise': _devise,
         'notes': _notesController.text.trim(),
         'produits': produits,
@@ -683,13 +809,34 @@ class _CreateSalePageState extends State<CreateSalePage> {
                       ),
                       const SizedBox(height: 12),
                       DropdownButtonFormField<String>(
+                        isExpanded: true,
                         key: ValueKey(_clientId),
                         initialValue: _clientId,
+                        selectedItemBuilder: (context) {
+                          return _filteredClients
+                              .map(
+                                (c) => Align(
+                                  alignment: Alignment.centerLeft,
+                                  child: Text(
+                                    (c['nom'] ?? c['name'] ?? 'Client').toString(),
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                    softWrap: false,
+                                  ),
+                                ),
+                              )
+                              .toList();
+                        },
                         items: [
                           for (final c in _filteredClients)
                             DropdownMenuItem<String>(
                               value: c['id']?.toString(),
-                              child: Text((c['nom'] ?? c['name'] ?? 'Client').toString()),
+                              child: Text(
+                                (c['nom'] ?? c['name'] ?? 'Client').toString(),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                softWrap: false,
+                              ),
                             ),
                         ],
                         onChanged: _saving
@@ -714,43 +861,61 @@ class _CreateSalePageState extends State<CreateSalePage> {
                         ),
                       ),
                       const SizedBox(height: 12),
-                      Row(
-                        children: [
-                          Expanded(
-                            child: Container(
-                              padding: const EdgeInsets.all(12),
-                              decoration: BoxDecoration(
-                                color: scheme.surfaceContainerHighest,
-                                borderRadius: BorderRadius.circular(14),
-                              ),
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Text('Total (approx.)', style: Theme.of(context).textTheme.labelMedium?.copyWith(color: scheme.onSurfaceVariant)),
-                                  const SizedBox(height: 6),
-                                  Text(
-                                    _fmtAmount(totalDisplay),
-                                    style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w700),
-                                  ),
-                                  const SizedBox(height: 4),
-                                  Text(
-                                    'Caisses totales: ${totalCaisses.toStringAsFixed(1)} cs',
-                                    style: Theme.of(context).textTheme.bodySmall?.copyWith(color: scheme.onSurfaceVariant),
-                                  ),
-                                  const SizedBox(height: 4),
-                                  Text(
-                                    'Emballages reçus: ${totalEmballagesRecus.toStringAsFixed(1)} cs  |  Dette: ${totalDetteEmballages.toStringAsFixed(1)} cs',
-                                    style: Theme.of(context).textTheme.bodySmall?.copyWith(color: scheme.onSurfaceVariant),
-                                  ),
-                                ],
-                              ),
+                      LayoutBuilder(
+                        builder: (context, constraints) {
+                          final compact = constraints.maxWidth < 520;
+
+                          final totalCard = Container(
+                            width: compact ? double.infinity : null,
+                            padding: const EdgeInsets.all(12),
+                            decoration: BoxDecoration(
+                              color: scheme.surfaceContainerHighest,
+                              borderRadius: BorderRadius.circular(14),
                             ),
-                          ),
-                          const SizedBox(width: 10),
-                          Chip(
-                            label: Text('Devise: $_devise'),
-                          ),
-                        ],
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text('Total (approx.)', style: Theme.of(context).textTheme.labelMedium?.copyWith(color: scheme.onSurfaceVariant)),
+                                const SizedBox(height: 6),
+                                Text(
+                                  _fmtAmount(totalDisplay),
+                                  style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w700),
+                                ),
+                                const SizedBox(height: 4),
+                                Text(
+                                  'Caisses totales: ${totalCaisses.toStringAsFixed(1)} cs',
+                                  style: Theme.of(context).textTheme.bodySmall?.copyWith(color: scheme.onSurfaceVariant),
+                                ),
+                                const SizedBox(height: 4),
+                                Text(
+                                  'Emballages reçus: ${totalEmballagesRecus.toStringAsFixed(1)} cs  |  Dette: ${totalDetteEmballages.toStringAsFixed(1)} cs',
+                                  style: Theme.of(context).textTheme.bodySmall?.copyWith(color: scheme.onSurfaceVariant),
+                                ),
+                              ],
+                            ),
+                          );
+
+                          final currencyChip = Chip(label: Text('Devise: $_devise'));
+
+                          if (compact) {
+                            return Column(
+                              crossAxisAlignment: CrossAxisAlignment.stretch,
+                              children: [
+                                totalCard,
+                                const SizedBox(height: 10),
+                                Align(alignment: Alignment.centerLeft, child: currencyChip),
+                              ],
+                            );
+                          }
+
+                          return Row(
+                            children: [
+                              Expanded(child: totalCard),
+                              const SizedBox(width: 10),
+                              currencyChip,
+                            ],
+                          );
+                        },
                       ),
                     ],
                   ),
@@ -768,106 +933,99 @@ class _CreateSalePageState extends State<CreateSalePage> {
                   child: Card(
                     child: Padding(
                       padding: const EdgeInsets.all(12),
-                      child: Row(
-                        children: [
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  (item['nom'] ?? 'Produit').toString(),
-                                  style: const TextStyle(fontWeight: FontWeight.w600),
-                                ),
-                                const SizedBox(height: 4),
-                                Builder(
-                                  builder: (context) {
-                                    final stockActuelCs = _asDouble(item['stock_actuel_caisses']);
-                                    final stockActuelAlias = _asDouble(item['stock_actuel']);
-                                    final btlParCs = _btlParCaisse(item);
-                                    final stockActuelDisplay = stockActuelCs > 0 ? stockActuelCs : (stockActuelAlias > 0 ? stockActuelAlias : (_asDouble(item['stock_actuel_bouteilles']) / btlParCs));
-                                    final prixCaisseDisplay = _toDisplay(_prixCaisseBase(item));
-                                    final id = int.tryParse(item['id']?.toString() ?? '');
-                                    final qtyCsText = id == null ? '0' : (_qtyCsControllers[id]?.text ?? '0');
-                                    final qtyCs = _asDouble(qtyCsText.replaceAll(',', '.'));
-                                    final qtyEmptyText = id == null ? '0' : (_qtyEmptyControllers[id]?.text ?? '0');
-                                    final qtyEmptyInput = _asDouble(qtyEmptyText.replaceAll(',', '.'));
-                                    final qtyEmpty = qtyEmptyInput > qtyCs ? qtyCs : qtyEmptyInput;
-                                    final totalLigne = qtyCs * prixCaisseDisplay;
-                                    final stockInsuffisant = qtyCs > stockActuelDisplay;
-                                    final detteEmballages = qtyCs - qtyEmpty;
+                      child: Builder(
+                        builder: (context) {
+                          final stockActuelCs = _asDouble(item['stock_actuel_caisses']);
+                          final stockActuelAlias = _asDouble(item['stock_actuel']);
+                          final btlParCs = _btlParCaisse(item);
+                          final stockActuelDisplay = stockActuelCs > 0 ? stockActuelCs : (stockActuelAlias > 0 ? stockActuelAlias : (_asDouble(item['stock_actuel_bouteilles']) / btlParCs));
+                          final prixCaisseDisplay = _toDisplay(_prixCaisseBase(item));
+                          final id = int.tryParse(item['id']?.toString() ?? '');
+                          final qtyCsText = id == null ? '0' : (_qtyCsControllers[id]?.text ?? '0');
+                          final qtyCs = _asDouble(qtyCsText.replaceAll(',', '.'));
+                          final qtyEmptyText = id == null ? '0' : (_qtyEmptyControllers[id]?.text ?? '0');
+                          final qtyEmptyInput = _asDouble(qtyEmptyText.replaceAll(',', '.'));
+                          final qtyEmpty = qtyEmptyInput > qtyCs ? qtyCs : qtyEmptyInput;
+                          final totalLigne = qtyCs * prixCaisseDisplay;
+                          final stockInsuffisant = qtyCs > stockActuelDisplay;
+                          final detteEmballages = qtyCs - qtyEmpty;
 
-                                    return Column(
-                                      crossAxisAlignment: CrossAxisAlignment.start,
-                                      children: [
-                                        Text(
-                                          'Stock mission disponible: ${stockActuelDisplay.toStringAsFixed(1)} cs  |  Prix caisse: ${_fmtAmount(prixCaisseDisplay)}',
-                                          style: Theme.of(context).textTheme.bodySmall?.copyWith(color: scheme.onSurfaceVariant),
-                                        ),
-                                        const SizedBox(height: 2),
-                                        Text(
-                                          'Caisses saisies: ${qtyCs.toStringAsFixed(1)} cs  |  Total ligne: ${_fmtAmount(totalLigne)}',
-                                          style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                                                color: scheme.primary,
-                                                fontWeight: FontWeight.w600,
-                                              ),
-                                        ),
-                                        const SizedBox(height: 2),
-                                        Text(
-                                          'Emballages reçus: ${qtyEmpty.toStringAsFixed(1)} cs  |  Dette: ${detteEmballages.toStringAsFixed(1)} cs',
-                                          style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                                                color: scheme.onSurfaceVariant,
-                                                fontWeight: FontWeight.w600,
-                                              ),
-                                        ),
-                                        if (stockInsuffisant) ...[
-                                          const SizedBox(height: 2),
-                                          Text(
-                                            'Stock mission insuffisant: ${qtyCs.toStringAsFixed(1)} cs demandées / ${stockActuelDisplay.toStringAsFixed(1)} cs disponibles',
-                                            style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                                                  color: scheme.error,
-                                                  fontWeight: FontWeight.w700,
-                                                ),
-                                          ),
-                                        ],
-                                      ],
-                                    );
-                                  },
+                          final qtyCsController = () {
+                            final id = int.tryParse(item['id']?.toString() ?? '');
+                            return id == null ? null : _qtyCsControllers[id];
+                          }();
+                          final qtyEmptyController = () {
+                            final id = int.tryParse(item['id']?.toString() ?? '');
+                            return id == null ? null : _qtyEmptyControllers[id];
+                          }();
+
+                          return Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                (item['nom'] ?? 'Produit').toString(),
+                                style: const TextStyle(fontWeight: FontWeight.w600),
+                              ),
+                              const SizedBox(height: 4),
+                              Text(
+                                'Stock mission disponible: ${stockActuelDisplay.toStringAsFixed(1)} cs  |  Prix caisse: ${_fmtAmount(prixCaisseDisplay)}',
+                                style: Theme.of(context).textTheme.bodySmall?.copyWith(color: scheme.onSurfaceVariant),
+                              ),
+                              const SizedBox(height: 2),
+                              Text(
+                                'Caisses saisies: ${qtyCs.toStringAsFixed(1)} cs  |  Total ligne: ${_fmtAmount(totalLigne)}',
+                                style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                                      color: scheme.primary,
+                                      fontWeight: FontWeight.w600,
+                                    ),
+                              ),
+                              const SizedBox(height: 2),
+                              Text(
+                                'Emballages reçus: ${qtyEmpty.toStringAsFixed(1)} cs  |  Dette: ${detteEmballages.toStringAsFixed(1)} cs',
+                                style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                                      color: scheme.onSurfaceVariant,
+                                      fontWeight: FontWeight.w600,
+                                    ),
+                              ),
+                              if (stockInsuffisant) ...[
+                                const SizedBox(height: 2),
+                                Text(
+                                  'Stock mission insuffisant: ${qtyCs.toStringAsFixed(1)} cs demandées / ${stockActuelDisplay.toStringAsFixed(1)} cs disponibles',
+                                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                                        color: scheme.error,
+                                        fontWeight: FontWeight.w700,
+                                      ),
                                 ),
                               ],
-                            ),
-                          ),
-                          const SizedBox(width: 10),
-                          SizedBox(
-                            width: 120,
-                            child: Column(
-                              children: [
-                                TextField(
-                                  controller: () {
-                                    final id = int.tryParse(item['id']?.toString() ?? '');
-                                    return id == null ? null : _qtyCsControllers[id];
-                                  }(),
-                                  enabled: !_saving,
-                                  keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                                  decoration: const InputDecoration(
-                                    labelText: 'Caisses',
+                              const SizedBox(height: 10),
+                              Row(
+                                children: [
+                                  Expanded(
+                                    child: TextField(
+                                      controller: qtyCsController,
+                                      enabled: !_saving,
+                                      keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                                      decoration: const InputDecoration(
+                                        labelText: 'Caisses',
+                                      ),
+                                    ),
                                   ),
-                                ),
-                                const SizedBox(height: 8),
-                                TextField(
-                                  controller: () {
-                                    final id = int.tryParse(item['id']?.toString() ?? '');
-                                    return id == null ? null : _qtyEmptyControllers[id];
-                                  }(),
-                                  enabled: !_saving,
-                                  keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                                  decoration: const InputDecoration(
-                                    labelText: 'Vides',
+                                  const SizedBox(width: 10),
+                                  Expanded(
+                                    child: TextField(
+                                      controller: qtyEmptyController,
+                                      enabled: !_saving,
+                                      keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                                      decoration: const InputDecoration(
+                                        labelText: 'Vides',
+                                      ),
+                                    ),
                                   ),
-                                ),
-                              ],
-                            ),
-                          ),
-                        ],
+                                ],
+                              ),
+                            ],
+                          );
+                        },
                       ),
                     ),
                   ),
@@ -887,11 +1045,11 @@ class _CreateSalePageState extends State<CreateSalePage> {
                     children: [
                       if (_recentSales.isEmpty)
                         Text(
-                          'Aucune vente récente.',
+                          'Aucune vente enregistrée aujourd’hui.',
                           style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: scheme.onSurfaceVariant),
                         )
                       else
-                        for (final sale in _recentSales.take(5))
+                        for (final sale in _recentSales.take(8))
                           Padding(
                             padding: const EdgeInsets.only(bottom: 10),
                             child: Container(
@@ -901,38 +1059,60 @@ class _CreateSalePageState extends State<CreateSalePage> {
                                 borderRadius: BorderRadius.circular(16),
                                 border: Border.all(color: scheme.outlineVariant),
                               ),
-                              child: Row(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
-                                  Container(
-                                    width: 40,
-                                    height: 40,
-                                    decoration: BoxDecoration(
-                                      color: scheme.primaryContainer,
-                                      borderRadius: BorderRadius.circular(12),
-                                    ),
-                                    child: Icon(Icons.receipt_long, color: scheme.onPrimaryContainer, size: 20),
-                                  ),
-                                  const SizedBox(width: 10),
-                                  Expanded(
-                                    child: Column(
-                                      crossAxisAlignment: CrossAxisAlignment.start,
-                                      children: [
-                                        Text(
-                                          (sale['numero_facture'] ?? sale['reference'] ?? 'Vente').toString(),
-                                          style: const TextStyle(fontWeight: FontWeight.w700),
+                                  Row(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      Container(
+                                        width: 40,
+                                        height: 40,
+                                        decoration: BoxDecoration(
+                                          color: scheme.primaryContainer,
+                                          borderRadius: BorderRadius.circular(12),
                                         ),
-                                        const SizedBox(height: 2),
-                                        Text(
-                                          '${(sale['client_nom'] ?? 'Client').toString()} · Caisses: ${(sale['caisses_vendues'] ?? 0).toString()}',
-                                          style: Theme.of(context).textTheme.bodySmall?.copyWith(color: scheme.onSurfaceVariant),
+                                        child: Icon(Icons.receipt_long, color: scheme.onPrimaryContainer, size: 20),
+                                      ),
+                                      const SizedBox(width: 10),
+                                      Expanded(
+                                        child: Column(
+                                          crossAxisAlignment: CrossAxisAlignment.start,
+                                          children: [
+                                            Text(
+                                              (sale['numero_facture'] ?? sale['reference'] ?? 'Vente').toString(),
+                                              style: const TextStyle(fontWeight: FontWeight.w700),
+                                            ),
+                                            const SizedBox(height: 2),
+                                            Text(
+                                              '${(sale['client_nom'] ?? 'Client').toString()} · Caisses: ${(sale['caisses_vendues'] ?? 0).toString()}',
+                                              style: Theme.of(context).textTheme.bodySmall?.copyWith(color: scheme.onSurfaceVariant),
+                                            ),
+                                            const SizedBox(height: 2),
+                                            Text(
+                                              'Heure: ${_formatSaleTime(sale['date_vente']?.toString())}',
+                                              style: Theme.of(context).textTheme.bodySmall?.copyWith(color: scheme.onSurfaceVariant),
+                                            ),
+                                          ],
                                         ),
-                                      ],
-                                    ),
+                                      ),
+                                    ],
                                   ),
-                                  const SizedBox(width: 10),
-                                  Text(
-                                    _fmtAmount(_toDisplay(_asDouble(sale['total_ttc']))),
-                                    style: const TextStyle(fontWeight: FontWeight.w700),
+                                  const SizedBox(height: 10),
+                                  Row(
+                                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                    children: [
+                                      Text(
+                                        _fmtAmount(_toDisplay(_asDouble(sale['total_ttc']))),
+                                        style: const TextStyle(fontWeight: FontWeight.w700),
+                                      ),
+                                      IconButton.filledTonal(
+                                        visualDensity: VisualDensity.compact,
+                                        onPressed: () => _openInvoice(sale),
+                                        icon: const Icon(Icons.print_rounded),
+                                        tooltip: 'Imprimer la facture',
+                                      ),
+                                    ],
                                   ),
                                 ],
                               ),

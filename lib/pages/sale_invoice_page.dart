@@ -148,96 +148,101 @@ class _SaleInvoicePageState extends State<SaleInvoicePage> {
         ? await _loadLogoImage(_resolveLogoUrl(widget.companyLogo))
         : null;
 
+    final company = (widget.companyName == null || widget.companyName!.trim().isEmpty)
+        ? 'BDGL Logistique'
+        : widget.companyName!.trim();
+
+    final adresse = widget.companyAddress?.trim();
+    final telSociete = widget.companyTelephone?.trim();
+    final email = widget.companyEmail?.trim();
+    final contact = widget.companyContact?.trim();
+    final rccm = widget.companyRccm?.trim();
+    final idNat = widget.companyIdNat?.trim();
+    final nif = widget.companyNif?.trim();
+    final compte = widget.companyAccount?.trim();
+
+    final clientTel = widget.clientTelephone?.trim();
+    final clientNumero = widget.clientNumero?.trim();
+    final zone = widget.zoneNom?.trim();
+    final totalCaisses = widget.lignes.fold<double>(0, (sum, line) => sum + line.caisses);
+    final totalEmballagesRecus = widget.lignes.fold<double>(0, (sum, line) => sum + line.caissesVidesRecues);
+    final totalDetteEmballages = widget.lignes.fold<double>(0, (sum, line) => sum + line.detteCaisses);
+
+    final hasRistourne = (widget.ristourneMontant != null && widget.ristourneMontant!.abs() > 0) ||
+        (widget.ristourneTaux != null && widget.ristourneTaux!.abs() > 0);
+
     doc.addPage(
-      pw.Page(
+      pw.MultiPage(
         pageFormat: format,
         margin: const pw.EdgeInsets.all(12),
+        maxPages: 100,
         build: (context) {
-          final company = (widget.companyName == null || widget.companyName!.trim().isEmpty)
-              ? 'Bralima Logistique'
-              : widget.companyName!.trim();
-
-          final adresse = widget.companyAddress?.trim();
-          final telSociete = widget.companyTelephone?.trim();
-          final email = widget.companyEmail?.trim();
-          final contact = widget.companyContact?.trim();
-          final rccm = widget.companyRccm?.trim();
-          final idNat = widget.companyIdNat?.trim();
-          final nif = widget.companyNif?.trim();
-          final compte = widget.companyAccount?.trim();
-
-          final clientTel = widget.clientTelephone?.trim();
-          final clientNumero = widget.clientNumero?.trim();
-          final zone = widget.zoneNom?.trim();
-          final totalCaisses = widget.lignes.fold<double>(0, (sum, line) => sum + line.caisses);
-          final totalEmballagesRecus = widget.lignes.fold<double>(0, (sum, line) => sum + line.caissesVidesRecues);
-          final totalDetteEmballages = widget.lignes.fold<double>(0, (sum, line) => sum + line.detteCaisses);
-
-          final hasRistourne = (widget.ristourneMontant != null && widget.ristourneMontant!.abs() > 0) ||
-              (widget.ristourneTaux != null && widget.ristourneTaux!.abs() > 0);
-
-          return pw.DefaultTextStyle(
-            style: const pw.TextStyle(fontSize: 13),
-            child: pw.Column(
-              crossAxisAlignment: pw.CrossAxisAlignment.stretch,
-              children: [
-                pw.Center(
-                  child: pw.Column(
-                    children: [
-                      if (logoImage != null)
-                        pw.Container(
-                          width: 64,
-                          height: 64,
-                          margin: const pw.EdgeInsets.only(bottom: 6),
-                          child: pw.ClipRRect(
-                            horizontalRadius: 8,
-                            verticalRadius: 8,
-                            child: pw.Image(logoImage, fit: pw.BoxFit.cover),
-                          ),
-                        ),
-                      pw.Text(company.toUpperCase(), style: pw.TextStyle(fontSize: 18, fontWeight: pw.FontWeight.bold)),
-                      if (adresse != null && adresse.isNotEmpty) pw.Text(adresse, style: const pw.TextStyle(fontSize: 10)),
-                      if (telSociete != null && telSociete.isNotEmpty) pw.Text('Tél: $telSociete', style: const pw.TextStyle(fontSize: 10)),
-                      if (email != null && email.isNotEmpty) pw.Text('Email: $email', style: const pw.TextStyle(fontSize: 10)),
-                      if (contact != null && contact.isNotEmpty) pw.Text('Contact: $contact', style: const pw.TextStyle(fontSize: 10)),
-                      if (rccm != null && rccm.isNotEmpty) pw.Text('RCCM: $rccm', style: const pw.TextStyle(fontSize: 10)),
-                      if (idNat != null && idNat.isNotEmpty) pw.Text('ID NAT: $idNat', style: const pw.TextStyle(fontSize: 10)),
-                      if (nif != null && nif.isNotEmpty) pw.Text('NIF: $nif', style: const pw.TextStyle(fontSize: 10)),
-                      if (compte != null && compte.isNotEmpty) pw.Text('Compte: $compte', style: const pw.TextStyle(fontSize: 10)),
-                      pw.SizedBox(height: 6),
-                      pw.Divider(thickness: 1),
-                      pw.SizedBox(height: 4),
-                      pw.Text(title, style: pw.TextStyle(fontWeight: pw.FontWeight.bold, fontSize: 13)),
-                      pw.SizedBox(height: 2),
-                      pw.Text(
-                        '${widget.date.day.toString().padLeft(2, '0')}/${widget.date.month.toString().padLeft(2, '0')}/${widget.date.year} ${widget.date.hour.toString().padLeft(2, '0')}:${widget.date.minute.toString().padLeft(2, '0')}',
-                        style: const pw.TextStyle(fontSize: 10),
-                      ),
-                    ],
+          return [
+            if (logoImage != null)
+              pw.Center(
+                child: pw.Container(
+                  width: 52,
+                  height: 52,
+                  margin: const pw.EdgeInsets.only(bottom: 4),
+                  child: pw.ClipRRect(
+                    horizontalRadius: 8,
+                    verticalRadius: 8,
+                    child: pw.Image(logoImage, fit: pw.BoxFit.cover),
                   ),
                 ),
-                pw.SizedBox(height: 10),
-                pw.Text('Client: ${widget.clientNom}', style: pw.TextStyle(fontWeight: pw.FontWeight.bold, fontSize: 14)),
-                if (clientTel != null && clientTel.isNotEmpty) pw.Text('Téléphone: $clientTel', style: const pw.TextStyle(fontSize: 12)),
-                if (zone != null && zone.isNotEmpty) pw.Text('Zone: $zone', style: const pw.TextStyle(fontSize: 12)),
-                if (clientNumero != null && clientNumero.isNotEmpty) pw.Text('N° client: $clientNumero', style: const pw.TextStyle(fontSize: 12)),
-                if (widget.produitsCumules != null && widget.produitsCumules! > 0)
-                  pw.Text(
-                    widget.ristourneInfoPresent
-                        ? 'Produits cumulés (période): ${widget.produitsCumules!.toStringAsFixed(1)} cs'
-                        : 'Produits cumulés: ${widget.produitsCumules!.toStringAsFixed(1)} cs',
-                    style: const pw.TextStyle(fontSize: 12),
-                  ),
-                if (hasRistourne)
-                  pw.Text(
-                    'Ristourne: ${(widget.ristourneTaux ?? 0).toStringAsFixed(2)}% (${_fmtAmount(widget.ristourneMontant ?? 0)})',
-                    style: const pw.TextStyle(fontSize: 12),
-                  ),
-                pw.SizedBox(height: 6),
-                pw.Divider(thickness: 1),
-                pw.SizedBox(height: 6),
-                ...widget.lignes.map(
-                  (l) => pw.Padding(
+              ),
+            pw.Center(
+              child: pw.Text(company.toUpperCase(), style: pw.TextStyle(fontSize: 18, fontWeight: pw.FontWeight.bold)),
+            ),
+            if (adresse != null && adresse.isNotEmpty)
+              pw.Center(child: pw.Text(adresse, style: const pw.TextStyle(fontSize: 10))),
+            if (telSociete != null && telSociete.isNotEmpty)
+              pw.Center(child: pw.Text('Tél: $telSociete', style: const pw.TextStyle(fontSize: 10))),
+            if (email != null && email.isNotEmpty)
+              pw.Center(child: pw.Text('Email: $email', style: const pw.TextStyle(fontSize: 10))),
+            if (contact != null && contact.isNotEmpty)
+              pw.Center(child: pw.Text('Contact: $contact', style: const pw.TextStyle(fontSize: 10))),
+            if (rccm != null && rccm.isNotEmpty)
+              pw.Center(child: pw.Text('RCCM: $rccm', style: const pw.TextStyle(fontSize: 10))),
+            if (idNat != null && idNat.isNotEmpty)
+              pw.Center(child: pw.Text('ID NAT: $idNat', style: const pw.TextStyle(fontSize: 10))),
+            if (nif != null && nif.isNotEmpty)
+              pw.Center(child: pw.Text('NIF: $nif', style: const pw.TextStyle(fontSize: 10))),
+            if (compte != null && compte.isNotEmpty)
+              pw.Center(child: pw.Text('Compte: $compte', style: const pw.TextStyle(fontSize: 10))),
+            pw.SizedBox(height: 6),
+            pw.Divider(thickness: 1),
+            pw.SizedBox(height: 4),
+            pw.Center(child: pw.Text(title, style: pw.TextStyle(fontWeight: pw.FontWeight.bold, fontSize: 13))),
+            pw.SizedBox(height: 2),
+            pw.Center(
+              child: pw.Text(
+                '${widget.date.day.toString().padLeft(2, '0')}/${widget.date.month.toString().padLeft(2, '0')}/${widget.date.year} ${widget.date.hour.toString().padLeft(2, '0')}:${widget.date.minute.toString().padLeft(2, '0')}',
+                style: const pw.TextStyle(fontSize: 10),
+              ),
+            ),
+            pw.SizedBox(height: 8),
+            pw.Text('Client: ${widget.clientNom}', style: pw.TextStyle(fontWeight: pw.FontWeight.bold, fontSize: 14)),
+            if (clientTel != null && clientTel.isNotEmpty) pw.Text('Téléphone: $clientTel', style: const pw.TextStyle(fontSize: 12)),
+            if (zone != null && zone.isNotEmpty) pw.Text('Zone: $zone', style: const pw.TextStyle(fontSize: 12)),
+            if (clientNumero != null && clientNumero.isNotEmpty) pw.Text('N° client: $clientNumero', style: const pw.TextStyle(fontSize: 12)),
+            if (widget.produitsCumules != null && widget.produitsCumules! > 0)
+              pw.Text(
+                widget.ristourneInfoPresent
+                    ? 'Produits cumulés (période): ${widget.produitsCumules!.toStringAsFixed(1)} cs'
+                    : 'Produits cumulés: ${widget.produitsCumules!.toStringAsFixed(1)} cs',
+                style: const pw.TextStyle(fontSize: 12),
+              ),
+            if (hasRistourne)
+              pw.Text(
+                'Ristourne: ${(widget.ristourneTaux ?? 0).toStringAsFixed(2)}% (${_fmtAmount(widget.ristourneMontant ?? 0)})',
+                style: const pw.TextStyle(fontSize: 12),
+              ),
+            pw.SizedBox(height: 6),
+            pw.Divider(thickness: 1),
+            pw.SizedBox(height: 6),
+            ...widget.lignes.expand((l) => [
+                  pw.Padding(
                     padding: const pw.EdgeInsets.only(bottom: 6),
                     child: pw.Column(
                       crossAxisAlignment: pw.CrossAxisAlignment.start,
@@ -261,67 +266,65 @@ class _SaleInvoicePageState extends State<SaleInvoicePage> {
                       ],
                     ),
                   ),
-                ),
-                pw.Divider(thickness: 1),
-                pw.SizedBox(height: 6),
-                pw.Row(
-                  mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
-                  children: [
-                    pw.Text('Total caisses achetées:', style: const pw.TextStyle(fontSize: 12)),
-                    pw.Text('${totalCaisses.toStringAsFixed(1)} cs', style: pw.TextStyle(fontWeight: pw.FontWeight.bold, fontSize: 12)),
-                  ],
-                ),
-                pw.SizedBox(height: 2),
-                pw.Row(
-                  mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
-                  children: [
-                    pw.Text('Emballages reçus:', style: const pw.TextStyle(fontSize: 12)),
-                    pw.Text('${totalEmballagesRecus.toStringAsFixed(1)} cs', style: pw.TextStyle(fontWeight: pw.FontWeight.bold, fontSize: 12)),
-                  ],
-                ),
-                pw.SizedBox(height: 2),
-                pw.Row(
-                  mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
-                  children: [
-                    pw.Text('Dette emballages:', style: const pw.TextStyle(fontSize: 12)),
-                    pw.Text('${totalDetteEmballages.toStringAsFixed(1)} cs', style: pw.TextStyle(fontWeight: pw.FontWeight.bold, fontSize: 12)),
-                  ],
-                ),
-                pw.SizedBox(height: 2),
-                pw.Row(
-                  mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
-                  children: [
-                    pw.Text('Total HT:', style: const pw.TextStyle(fontSize: 12)),
-                    pw.Text(_fmtAmount(widget.totalHt), style: const pw.TextStyle(fontSize: 12)),
-                  ],
-                ),
-                pw.SizedBox(height: 2),
-                pw.Row(
-                  mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
-                  children: [
-                    pw.Text('TVA:', style: const pw.TextStyle(fontSize: 12)),
-                    pw.Text(_fmtAmount(widget.totalTva), style: const pw.TextStyle(fontSize: 12)),
-                  ],
-                ),
-                pw.SizedBox(height: 4),
-                pw.Container(
-                  padding: const pw.EdgeInsets.only(top: 6),
-                  decoration: const pw.BoxDecoration(border: pw.Border(top: pw.BorderSide(width: 1))),
-                  child: pw.Row(
-                    mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
-                    children: [
-                      pw.Text('TOTAL TTC:', style: pw.TextStyle(fontWeight: pw.FontWeight.bold, fontSize: 16)),
-                      pw.Text(_fmtAmount(widget.totalTtc), style: pw.TextStyle(fontWeight: pw.FontWeight.bold, fontSize: 16)),
-                    ],
-                  ),
-                ),
-                pw.SizedBox(height: 12),
-                pw.Center(child: pw.Text('Merci pour votre confiance !', style: const pw.TextStyle(fontSize: 11))),
-                if (widget.vendeurNom != null && widget.vendeurNom!.trim().isNotEmpty)
-                  pw.Center(child: pw.Text('Vendeur: ${widget.vendeurNom!.trim()}', style: const pw.TextStyle(fontSize: 11))),
+                ]),
+            pw.Divider(thickness: 1),
+            pw.SizedBox(height: 6),
+            pw.Row(
+              mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+              children: [
+                pw.Text('Total caisses achetées:', style: const pw.TextStyle(fontSize: 12)),
+                pw.Text('${totalCaisses.toStringAsFixed(1)} cs', style: pw.TextStyle(fontWeight: pw.FontWeight.bold, fontSize: 12)),
               ],
             ),
-          );
+            pw.SizedBox(height: 2),
+            pw.Row(
+              mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+              children: [
+                pw.Text('Emballages reçus:', style: const pw.TextStyle(fontSize: 12)),
+                pw.Text('${totalEmballagesRecus.toStringAsFixed(1)} cs', style: pw.TextStyle(fontWeight: pw.FontWeight.bold, fontSize: 12)),
+              ],
+            ),
+            pw.SizedBox(height: 2),
+            pw.Row(
+              mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+              children: [
+                pw.Text('Dette emballages:', style: const pw.TextStyle(fontSize: 12)),
+                pw.Text('${totalDetteEmballages.toStringAsFixed(1)} cs', style: pw.TextStyle(fontWeight: pw.FontWeight.bold, fontSize: 12)),
+              ],
+            ),
+            pw.SizedBox(height: 2),
+            pw.Row(
+              mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+              children: [
+                pw.Text('Total HT:', style: const pw.TextStyle(fontSize: 12)),
+                pw.Text(_fmtAmount(widget.totalHt), style: const pw.TextStyle(fontSize: 12)),
+              ],
+            ),
+            pw.SizedBox(height: 2),
+            pw.Row(
+              mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+              children: [
+                pw.Text('TVA:', style: const pw.TextStyle(fontSize: 12)),
+                pw.Text(_fmtAmount(widget.totalTva), style: const pw.TextStyle(fontSize: 12)),
+              ],
+            ),
+            pw.SizedBox(height: 4),
+            pw.Container(
+              padding: const pw.EdgeInsets.only(top: 6),
+              decoration: const pw.BoxDecoration(border: pw.Border(top: pw.BorderSide(width: 1))),
+              child: pw.Row(
+                mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+                children: [
+                  pw.Text('TOTAL TTC:', style: pw.TextStyle(fontWeight: pw.FontWeight.bold, fontSize: 16)),
+                  pw.Text(_fmtAmount(widget.totalTtc), style: pw.TextStyle(fontWeight: pw.FontWeight.bold, fontSize: 16)),
+                ],
+              ),
+            ),
+            pw.SizedBox(height: 12),
+            pw.Center(child: pw.Text('Merci pour votre confiance !', style: const pw.TextStyle(fontSize: 11))),
+            if (widget.vendeurNom != null && widget.vendeurNom!.trim().isNotEmpty)
+              pw.Center(child: pw.Text('Vendeur: ${widget.vendeurNom!.trim()}', style: const pw.TextStyle(fontSize: 11))),
+          ];
         },
       ),
     );
