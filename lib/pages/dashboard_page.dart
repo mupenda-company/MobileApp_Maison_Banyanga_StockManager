@@ -207,6 +207,7 @@ class _DashboardPageState extends State<DashboardPage> {
     final dernierClientAdresse = (clients?['dernier_client_adresse'] ?? '').toString();
     final caissesVides = (stock?['caisses_vide'] ?? 0).toString();
     final caissesPleine = (stock?['caisses_pleine'] ?? 0).toString();
+    final caissesTotales = (stock?['caisses_totales'] ?? 0).toString();
 
     return RefreshIndicator(
       onRefresh: _load,
@@ -489,6 +490,29 @@ class _DashboardPageState extends State<DashboardPage> {
                   child: _metricCard(title: 'Caisses vides', value: caissesVides, icon: Icons.all_inbox),
                 ),
               ],
+            ),
+            const SizedBox(height: 12),
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+              decoration: BoxDecoration(
+                color: scheme.surface,
+                borderRadius: BorderRadius.circular(18),
+                border: Border.all(color: scheme.outlineVariant),
+              ),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text(
+                    'Total physique',
+                    style: Theme.of(context).textTheme.labelMedium?.copyWith(color: scheme.onSurfaceVariant),
+                  ),
+                  Text(
+                    caissesTotales,
+                    style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w800),
+                  ),
+                ],
+              ),
             ),
             const SizedBox(height: 12),
           ],
