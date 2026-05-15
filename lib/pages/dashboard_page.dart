@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:logis_agent/api/api_client.dart';
 import 'package:logis_agent/config/app_config.dart';
+import 'package:logis_agent/pages/agent_sales_history_page.dart';
 import 'package:logis_agent/pages/create_sale_page.dart';
 import 'package:logis_agent/services/app_refresh_service.dart';
 import 'package:logis_agent/services/api_service.dart';
@@ -477,6 +478,22 @@ class _DashboardPageState extends State<DashboardPage> {
                   },
                   icon: const Icon(Icons.add),
                   label: const Text('Nouvelle vente'),
+                ),
+              ),
+            ),
+            Padding(
+              padding: const EdgeInsets.only(bottom: 12),
+              child: SizedBox(
+                width: double.infinity,
+                child: OutlinedButton.icon(
+                  onPressed: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(builder: (context) => const AgentSalesHistoryPage()),
+                    );
+                  },
+                  icon: const Icon(Icons.history),
+                  label: const Text('Historique des ventes'),
                 ),
               ),
             ),
