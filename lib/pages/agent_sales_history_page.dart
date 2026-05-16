@@ -51,7 +51,7 @@ class _AgentSalesHistoryPageState extends State<AgentSalesHistoryPage> {
         query.add('agent_id=$agentId');
       }
 
-      final data = await client.getJson('${AppConfig.salesPath}/par-agent?${query.join('&')}');
+      final data = await client.getJson('/api/mobile/ventes-par-agent?${query.join('&')}');
 
       final list = data is List
           ? data
