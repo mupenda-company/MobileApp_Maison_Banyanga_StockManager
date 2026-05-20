@@ -148,7 +148,7 @@ class _AgentSalesHistoryPageState extends State<AgentSalesHistoryPage> {
 
       saleBlocks.add(
         pw.Container(
-          margin: const pw.EdgeInsets.only(bottom: 10),
+          margin: const pw.EdgeInsets.only(bottom: 6),
           decoration: pw.BoxDecoration(
             border: pw.Border(bottom: pw.BorderSide(width: 0.5, color: PdfColors.grey400)),
           ),
@@ -160,57 +160,57 @@ class _AgentSalesHistoryPageState extends State<AgentSalesHistoryPage> {
                 mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
                 children: [
                   pw.Expanded(
-                    child: pw.Text('$facture - $client', style: pw.TextStyle(fontWeight: pw.FontWeight.bold, fontSize: 11)),
+                    child: pw.Text('$facture - $client', style: pw.TextStyle(fontWeight: pw.FontWeight.bold, fontSize: 13)),
                   ),
-                  pw.Text(dateStr, style: const pw.TextStyle(fontSize: 10)),
+                  pw.Text(dateStr, style: const pw.TextStyle(fontSize: 11)),
                 ],
               ),
               // Product details table
               if (details is List && details.isNotEmpty) ...[
-                pw.SizedBox(height: 4),
+                pw.SizedBox(height: 3),
                 pw.Table(
                   border: pw.TableBorder.all(color: PdfColors.grey300, width: 0.5),
                   columnWidths: {
-                    0: const pw.FlexColumnWidth(3),
-                    1: const pw.FixedColumnWidth(50),
-                    2: const pw.FixedColumnWidth(55),
-                    3: const pw.FixedColumnWidth(55),
-                    4: const pw.FixedColumnWidth(65),
+                    0: const pw.FlexColumnWidth(3.5),
+                    1: const pw.FixedColumnWidth(60),
+                    2: const pw.FixedColumnWidth(65),
+                    3: const pw.FixedColumnWidth(60),
+                    4: const pw.FixedColumnWidth(75),
                   },
                   children: [
                     pw.TableRow(
                       decoration: const pw.BoxDecoration(color: PdfColors.grey200),
                       children: [
-                        pw.Padding(padding: const pw.EdgeInsets.all(4), child: pw.Text('Produit', style: pw.TextStyle(fontSize: 9, fontWeight: pw.FontWeight.bold))),
-                        pw.Padding(padding: const pw.EdgeInsets.all(4), child: pw.Text('Caisses', style: pw.TextStyle(fontSize: 9, fontWeight: pw.FontWeight.bold))),
-                        pw.Padding(padding: const pw.EdgeInsets.all(4), child: pw.Text('Bouteilles', style: pw.TextStyle(fontSize: 9, fontWeight: pw.FontWeight.bold))),
-                        pw.Padding(padding: const pw.EdgeInsets.all(4), child: pw.Text('Cs vides', style: pw.TextStyle(fontSize: 9, fontWeight: pw.FontWeight.bold))),
-                        pw.Padding(padding: const pw.EdgeInsets.all(4), child: pw.Text('Sous-total', style: pw.TextStyle(fontSize: 9, fontWeight: pw.FontWeight.bold))),
+                        pw.Padding(padding: const pw.EdgeInsets.all(5), child: pw.Text('Produit', style: pw.TextStyle(fontSize: 10, fontWeight: pw.FontWeight.bold))),
+                        pw.Padding(padding: const pw.EdgeInsets.all(5), child: pw.Text('Caisses', style: pw.TextStyle(fontSize: 10, fontWeight: pw.FontWeight.bold))),
+                        pw.Padding(padding: const pw.EdgeInsets.all(5), child: pw.Text('Bouteilles', style: pw.TextStyle(fontSize: 10, fontWeight: pw.FontWeight.bold))),
+                        pw.Padding(padding: const pw.EdgeInsets.all(5), child: pw.Text('Cs vides', style: pw.TextStyle(fontSize: 10, fontWeight: pw.FontWeight.bold))),
+                        pw.Padding(padding: const pw.EdgeInsets.all(5), child: pw.Text('Sous-total', style: pw.TextStyle(fontSize: 10, fontWeight: pw.FontWeight.bold))),
                       ],
                     ),
                     ...details.map((d) {
                       if (d is! Map<String, dynamic>) {
-                        return pw.TableRow(children: List.filled(5, pw.Padding(padding: const pw.EdgeInsets.all(4), child: pw.Text('', style: const pw.TextStyle(fontSize: 9)))));
+                        return pw.TableRow(children: List.filled(5, pw.Padding(padding: const pw.EdgeInsets.all(5), child: pw.Text('', style: const pw.TextStyle(fontSize: 10)))));
                       }
                       return pw.TableRow(
                         children: [
-                          pw.Padding(padding: const pw.EdgeInsets.all(4), child: pw.Text((d['produit_nom'] ?? '').toString(), style: const pw.TextStyle(fontSize: 9))),
-                          pw.Padding(padding: const pw.EdgeInsets.all(4), child: pw.Text('${d['quantite_caisses'] ?? 0}', style: const pw.TextStyle(fontSize: 9))),
-                          pw.Padding(padding: const pw.EdgeInsets.all(4), child: pw.Text('${d['quantite'] ?? 0}', style: const pw.TextStyle(fontSize: 9))),
-                          pw.Padding(padding: const pw.EdgeInsets.all(4), child: pw.Text('${d['caisses_vides_recues'] ?? 0}', style: const pw.TextStyle(fontSize: 9))),
-                          pw.Padding(padding: const pw.EdgeInsets.all(4), child: pw.Text('${d['sous_total'] ?? 0}', style: const pw.TextStyle(fontSize: 9))),
+                          pw.Padding(padding: const pw.EdgeInsets.all(5), child: pw.Text((d['produit_nom'] ?? '').toString(), style: const pw.TextStyle(fontSize: 10))),
+                          pw.Padding(padding: const pw.EdgeInsets.all(5), child: pw.Text('${d['quantite_caisses'] ?? 0}', style: const pw.TextStyle(fontSize: 10))),
+                          pw.Padding(padding: const pw.EdgeInsets.all(5), child: pw.Text('${d['quantite'] ?? 0}', style: const pw.TextStyle(fontSize: 10))),
+                          pw.Padding(padding: const pw.EdgeInsets.all(5), child: pw.Text('${d['caisses_vides_recues'] ?? 0}', style: const pw.TextStyle(fontSize: 10))),
+                          pw.Padding(padding: const pw.EdgeInsets.all(5), child: pw.Text('${d['sous_total'] ?? 0}', style: const pw.TextStyle(fontSize: 10))),
                         ],
                       );
                     }),
                   ],
                 ),
               ],
-              pw.SizedBox(height: 3),
+              pw.SizedBox(height: 2),
               pw.Row(
                 mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
                 children: [
-                  pw.Text('Caisses: $caisses', style: const pw.TextStyle(fontSize: 9, color: PdfColors.grey700)),
-                  pw.Text('Total TTC: $ttc', style: pw.TextStyle(fontSize: 10, fontWeight: pw.FontWeight.bold)),
+                  pw.Text('Caisses: $caisses', style: const pw.TextStyle(fontSize: 10, color: PdfColors.grey700)),
+                  pw.Text('Total TTC: $ttc', style: pw.TextStyle(fontSize: 11, fontWeight: pw.FontWeight.bold)),
                 ],
               ),
             ],
@@ -222,7 +222,7 @@ class _AgentSalesHistoryPageState extends State<AgentSalesHistoryPage> {
     pdf.addPage(
       pw.MultiPage(
         pageFormat: PdfPageFormat.a4,
-        margin: const pw.EdgeInsets.all(32),
+        margin: const pw.EdgeInsets.all(20),
         header: (pw.Context context) {
           if (context.pageNumber == 1) {
             return pw.Column(
@@ -230,22 +230,22 @@ class _AgentSalesHistoryPageState extends State<AgentSalesHistoryPage> {
               children: [
                 pw.Text(
                   'Historique des Ventes',
-                  style: pw.TextStyle(fontSize: 24, fontWeight: pw.FontWeight.bold),
+                  style: pw.TextStyle(fontSize: 20, fontWeight: pw.FontWeight.bold),
                 ),
-                pw.SizedBox(height: 8),
-                pw.Text('Agent: $agentName', style: const pw.TextStyle(fontSize: 14)),
+                pw.SizedBox(height: 6),
+                pw.Text('Agent: $agentName', style: const pw.TextStyle(fontSize: 13)),
                 pw.Text(
                   'Du ${DateFormat('dd/MM/yyyy').format(_dateDebut)} au ${DateFormat('dd/MM/yyyy').format(_dateFin)}',
-                  style: const pw.TextStyle(fontSize: 12),
+                  style: const pw.TextStyle(fontSize: 11),
                 ),
-                pw.SizedBox(height: 16),
+                pw.SizedBox(height: 10),
               ],
             );
           }
           return pw.Column(
             children: [
-              pw.Text('Historique des Ventes - $agentName', style: const pw.TextStyle(fontSize: 10, color: PdfColors.grey)),
-              pw.SizedBox(height: 8),
+              pw.Text('Historique des Ventes - $agentName', style: const pw.TextStyle(fontSize: 9, color: PdfColors.grey)),
+              pw.SizedBox(height: 4),
             ],
           );
         },
@@ -260,22 +260,22 @@ class _AgentSalesHistoryPageState extends State<AgentSalesHistoryPage> {
         build: (pw.Context context) {
           return [
             ...saleBlocks,
-            pw.SizedBox(height: 16),
+            pw.SizedBox(height: 10),
             pw.Divider(),
-            pw.SizedBox(height: 8),
+            pw.SizedBox(height: 6),
             pw.Row(
               mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
               children: [
-                pw.Text('Total Caisses:', style: pw.TextStyle(fontWeight: pw.FontWeight.bold, fontSize: 14)),
-                pw.Text(totalCaisses.toStringAsFixed(1), style: pw.TextStyle(fontWeight: pw.FontWeight.bold, fontSize: 14)),
+                pw.Text('Total Caisses:', style: pw.TextStyle(fontWeight: pw.FontWeight.bold, fontSize: 16)),
+                pw.Text(totalCaisses.toStringAsFixed(1), style: pw.TextStyle(fontWeight: pw.FontWeight.bold, fontSize: 16)),
               ],
             ),
-            pw.SizedBox(height: 8),
+            pw.SizedBox(height: 6),
             pw.Row(
               mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
               children: [
-                pw.Text('Total TTC:', style: pw.TextStyle(fontWeight: pw.FontWeight.bold, fontSize: 14)),
-                pw.Text(totalTtc.toStringAsFixed(2), style: pw.TextStyle(fontWeight: pw.FontWeight.bold, fontSize: 14)),
+                pw.Text('Total TTC:', style: pw.TextStyle(fontWeight: pw.FontWeight.bold, fontSize: 16)),
+                pw.Text(totalTtc.toStringAsFixed(2), style: pw.TextStyle(fontWeight: pw.FontWeight.bold, fontSize: 16)),
               ],
             ),
           ];
