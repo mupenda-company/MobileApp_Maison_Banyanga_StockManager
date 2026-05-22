@@ -51,6 +51,20 @@ dev_dependencies:
   # package. See that file for information about deactivating specific lint
   # rules and activating additional ones.
   flutter_lints: ^6.0.0
+  flutter_launcher_icons: ^0.14.3
+
+# Configuration pour générer les icônes de l'application depuis le logo entreprise
+# Pour mettre à jour l'icône avec le logo de l'entreprise:
+# 1. Télécharger le logo depuis le backend: 
+#    curl -o lib/assets/app_icon.png "http://your-server.com/uploads/logo_filename.png"
+# 2. Lancer la commande: dart run flutter_launcher_icons
+# 3. Reconstruire l'application: flutter build apk ou flutter build ios
+flutter_launcher_icons:
+  android: true
+  ios: true
+  image_path: "lib/assets/app_icon.png"
+  adaptive_icon_background: "#FFFFFF"
+  adaptive_icon_foreground: "lib/assets/app_icon.png"
 
 # For information on the generic Dart part of this file, see the
 # following page: https://dart.dev/tools/pub/pubspec

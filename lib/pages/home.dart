@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:logis_agent/config/app_config.dart';
 import 'package:logis_agent/pages/clients_page.dart';
 import 'package:logis_agent/pages/dashboard_page.dart';
 import 'package:logis_agent/pages/login.dart';
@@ -55,20 +56,34 @@ class _HomeState extends State<Home> {
     return SafeArea(
       child: Scaffold(
         appBar: AppBar(
-          title: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
+          title: Row(
             children: [
-              Text(
-                AppThemeController.instance.companyName,
-                style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w800),
-              ),
-              Text(
-                _title,
-                style: TextStyle(
-                  fontSize: 12,
-                  fontWeight: FontWeight.w600,
-                  color: scheme.onSurfaceVariant,
+              if (AppThemeController.instance.companyLogo != null)
+                Padding(
+                  padding: const EdgeInsets.only(right: 10),
+                  child: Image.network(
+                    '${AppConfig.apiBaseUrl}/uploads/${AppThemeController.instance.companyLogo}',
+                    height: 32,
+                    width: 32,
+                    errorBuilder: (_, __, ___) => const Icon(Icons.storefront, size: 32),
+                  ),
                 ),
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    AppThemeController.instance.companyName,
+                    style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w800),
+                  ),
+                  Text(
+                    _title,
+                    style: TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w600,
+                      color: scheme.onSurfaceVariant,
+                    ),
+                  ),
+                ],
               ),
             ],
           ),
