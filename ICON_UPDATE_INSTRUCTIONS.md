@@ -12,7 +12,7 @@ Récupérez le nom du fichier logo depuis les paramètres de l'application web (
 
 ```bash
 # Remplacez l'URL et le nom du fichier logo par les vôtres
-curl -o lib/assets/app_icon.png "http://your-server.com/uploads/logo.png"
+curl -o lib/assets/app_icon.png "http://192.168.150.102/Bralima_logistique/public/uploads/logo_1779310176.png"
 ```
 
 ### Étape 2: Vérifier l'image
