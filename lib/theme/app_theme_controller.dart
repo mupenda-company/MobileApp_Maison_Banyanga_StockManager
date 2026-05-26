@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
 class AppThemeController extends ChangeNotifier {
   static final AppThemeController instance = AppThemeController._();
@@ -24,13 +25,20 @@ class AppThemeController extends ChangeNotifier {
 
     bool changed = false;
 
-    if (parsedColor != null && parsedColor.value != _primaryColor.value) {
+    if (parsedColor != null && parsedColor.toARGB32() != _primaryColor.toARGB32()) {
       _primaryColor = parsedColor;
       changed = true;
     }
 
     if (name != null && name.trim().isNotEmpty && name.trim() != _companyName) {
       _companyName = name.trim();
+      // Mettre à jour le nom dans l'écran "Récents" d'Android
+      SystemChrome.setApplicationSwitcherDescription(
+        ApplicationSwitcherDescription(
+          label: _companyName,
+          primaryColor: _primaryColor.toARGB32(),
+        ),
+      );
       changed = true;
     }
 
