@@ -18,6 +18,11 @@ class Home extends StatefulWidget {
 class _HomeState extends State<Home> {
   int _index = 0;
 
+  bool get _isRistourne {
+    final session = AuthService.instance.session;
+    return (session?.mission?['type_mission'] ?? 'vente').toString() == 'ristourne';
+  }
+
   final _pages = const [
     DashboardPage(),
     SalesPage(),
@@ -30,7 +35,7 @@ class _HomeState extends State<Home> {
       case 0:
         return 'Accueil';
       case 1:
-        return 'Ventes';
+        return _isRistourne ? 'Ristournes' : 'Ventes';
       case 2:
         return 'Stocks';
       case 3:
@@ -111,23 +116,23 @@ class _HomeState extends State<Home> {
               _index = value;
             });
           },
-          destinations: const [
-            NavigationDestination(
+          destinations: [
+            const NavigationDestination(
               icon: Icon(Icons.dashboard_outlined),
               selectedIcon: Icon(Icons.dashboard),
               label: 'Accueil',
             ),
             NavigationDestination(
-              icon: Icon(Icons.point_of_sale_outlined),
-              selectedIcon: Icon(Icons.point_of_sale),
-              label: 'Ventes',
+              icon: _isRistourne ? const Icon(Icons.card_giftcard_outlined) : const Icon(Icons.point_of_sale_outlined),
+              selectedIcon: _isRistourne ? const Icon(Icons.card_giftcard) : const Icon(Icons.point_of_sale),
+              label: _isRistourne ? 'Ristournes' : 'Ventes',
             ),
-            NavigationDestination(
+            const NavigationDestination(
               icon: Icon(Icons.inventory_2_outlined),
               selectedIcon: Icon(Icons.inventory_2),
               label: 'Stocks',
             ),
-            NavigationDestination(
+            const NavigationDestination(
               icon: Icon(Icons.people_outline),
               selectedIcon: Icon(Icons.people),
               label: 'Clients',

@@ -251,7 +251,9 @@ class _StocksPageState extends State<StocksPage> {
       }
       return sum;
     });
-    final missionLabel = 'Stocks de la mission';
+    final session = AuthService.instance.session;
+    final isRistourne = (session?.mission?['type_mission'] ?? 'vente').toString() == 'ristourne';
+    final missionLabel = isRistourne ? 'Stocks de la ristourne' : 'Stocks de la mission';
 
     return RefreshIndicator(
       onRefresh: _load,
@@ -295,7 +297,9 @@ class _StocksPageState extends State<StocksPage> {
                           ),
                           const SizedBox(height: 4),
                           Text(
-                            'Suivi du stock embarqué pour les ventes terrain.',
+                            isRistourne
+                                ? 'Suivi du stock embarqué pour les livraisons de ristourne.'
+                                : 'Suivi du stock embarqué pour les ventes terrain.',
                             style: Theme.of(context).textTheme.bodySmall?.copyWith(color: scheme.onSurfaceVariant),
                           ),
                         ],

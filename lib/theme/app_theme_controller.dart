@@ -6,7 +6,7 @@ class AppThemeController extends ChangeNotifier {
   AppThemeController._();
 
   Color _primaryColor = const Color(0xFF3B82F6);
-  String _companyName = 'Bralima Logistique';
+  String _companyName = 'BDGL Logistique';
   String? _companyLogo;
 
   Color get primaryColor => _primaryColor;

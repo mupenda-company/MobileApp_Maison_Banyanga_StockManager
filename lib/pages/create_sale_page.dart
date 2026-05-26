@@ -222,6 +222,10 @@ class _CreateSalePageState extends State<CreateSalePage> {
     return AuthService.instance.session?.mission?['id']?.toString();
   }
 
+  bool get _isRistourne {
+    return (AuthService.instance.session?.mission?['type_mission'] ?? 'vente').toString() == 'ristourne';
+  }
+
   String? get _userId {
     return AuthService.instance.session?.agent?.id?.toString();
   }
@@ -756,12 +760,13 @@ class _CreateSalePageState extends State<CreateSalePage> {
         appBar: AppBar(
           title: const Text('Nouvelle vente'),
           actions: [
-            TextButton(
-              onPressed: _saving ? null : _save,
-              child: _saving
-                  ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2))
-                  : const Text('Enregistrer'),
-            ),
+            if (!_isRistourne)
+              TextButton(
+                onPressed: _saving ? null : _save,
+                child: _saving
+                    ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2))
+                    : const Text('Enregistrer'),
+              ),
           ],
         ),
         body: RefreshIndicator(
@@ -769,6 +774,39 @@ class _CreateSalePageState extends State<CreateSalePage> {
           child: ListView(
             padding: const EdgeInsets.all(16),
             children: [
+              if (_isRistourne)
+                Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.all(24),
+                  margin: const EdgeInsets.only(bottom: 16),
+                  decoration: BoxDecoration(
+                    color: scheme.errorContainer,
+                    borderRadius: BorderRadius.circular(20),
+                    border: Border.all(color: scheme.error),
+                  ),
+                  child: Column(
+                    children: [
+                      Icon(Icons.block_rounded, size: 48, color: scheme.onErrorContainer),
+                      const SizedBox(height: 16),
+                      Text(
+                        'Mission de ristourne',
+                        style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                          fontWeight: FontWeight.w800,
+                          color: scheme.onErrorContainer,
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      Text(
+                        'Les ventes ne sont pas possibles sur une mission de ristourne. Utilisez l\'onglet Ristournes pour gérer les livraisons.',
+                        textAlign: TextAlign.center,
+                        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                          color: scheme.onErrorContainer,
+                        ),
+                      ),
+                    ],
+                  ),
+                )
+              else ...[
               if (_loading) const LinearProgressIndicator(minHeight: 2),
               if (_error != null)
                 Padding(
@@ -1123,6 +1161,7 @@ class _CreateSalePageState extends State<CreateSalePage> {
                 ),
               ),
             ],
+              ],
           ),
         ),
       ),
