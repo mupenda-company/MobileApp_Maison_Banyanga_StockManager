@@ -1,3 +1,5 @@
+import 'dart:math';
+
 import 'package:flutter/material.dart';
 import 'package:logis_agent/api/api_client.dart';
 import 'package:logis_agent/config/app_config.dart';
@@ -283,6 +285,30 @@ class _SalesPageState extends State<SalesPage> {
                         ''
                   : '',
             ),
+            deductionLocale: double.tryParse(
+              (payload?['ristourneInfo'] is Map<String, dynamic>)
+                  ? (payload?['ristourneInfo']
+                                as Map<String, dynamic>)['deduction_locale']
+                            ?.toString() ??
+                        ''
+                  : '',
+            ),
+            tauxLocal: (payload?['ristourneInfo'] is Map<String, dynamic>)
+                ? int.tryParse(
+                    (payload?['ristourneInfo']
+                            as Map<String, dynamic>)['taux_local']
+                        ?.toString() ??
+                    '',
+                  )
+                : null,
+            montantRistourneNet: double.tryParse(
+              (payload?['ristourneInfo'] is Map<String, dynamic>)
+                  ? (payload?['ristourneInfo']
+                                as Map<String, dynamic>)['montant_ristourne_net']
+                            ?.toString() ??
+                        ''
+                  : '',
+            ),
             ristourneInfoPresent:
                 payload?['ristourneInfo'] is Map<String, dynamic>,
             vendeurNom:
@@ -483,6 +509,45 @@ class _SalesPageState extends State<SalesPage> {
           context,
         ).showSnackBar(SnackBar(content: Text(e.toString())));
     }
+  }
+
+  Widget _ristourneBadge(String statut, ColorScheme scheme) {
+    Color bg;
+    Color fg;
+    String label;
+    switch (statut) {
+      case 'livree':
+        bg = scheme.primaryContainer;
+        fg = scheme.onPrimaryContainer;
+        label = 'Livrée';
+        break;
+      case 'non_livree':
+        bg = scheme.errorContainer;
+        fg = scheme.onErrorContainer;
+        label = 'Non livrée';
+        break;
+      default:
+        bg = scheme.tertiaryContainer;
+        fg = scheme.onTertiaryContainer;
+        label = 'En attente';
+    }
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+      decoration: BoxDecoration(color: bg, borderRadius: BorderRadius.circular(6)),
+      child: Text(label, style: TextStyle(fontSize: 10, color: fg, fontWeight: FontWeight.w700)),
+    );
+  }
+
+  Widget _caseInfoChip(String label, String value, IconData icon, ColorScheme scheme) {
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Icon(icon, size: 13, color: scheme.onSurfaceVariant),
+        const SizedBox(width: 3),
+        Text('$label: ', style: Theme.of(context).textTheme.labelSmall?.copyWith(color: scheme.onSurfaceVariant)),
+        Text('$value cs', style: Theme.of(context).textTheme.labelSmall?.copyWith(fontWeight: FontWeight.w700)),
+      ],
+    );
   }
 
   @override
@@ -732,34 +797,94 @@ class _SalesPageState extends State<SalesPage> {
           if (_missionType == 'ristourne' || _ristournes.isNotEmpty)
             Container(
               width: double.infinity,
-              padding: const EdgeInsets.all(12),
+              padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(
-                color: scheme.surface,
-                borderRadius: BorderRadius.circular(16),
-                border: Border.all(color: scheme.outlineVariant),
+                gradient: LinearGradient(
+                  colors: [
+                    scheme.tertiaryContainer.withOpacity(0.95),
+                    scheme.surface,
+                  ],
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                ),
+                borderRadius: BorderRadius.circular(24),
+                border: Border.all(color: scheme.tertiary.withOpacity(0.08)),
               ),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(
-                    'Ristournes de la mission',
-                    style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                      fontWeight: FontWeight.w800,
-                    ),
+                  Row(
+                    children: [
+                      Container(
+                        width: 48,
+                        height: 48,
+                        decoration: BoxDecoration(
+                          color: scheme.tertiary,
+                          borderRadius: BorderRadius.circular(16),
+                        ),
+                        child: Icon(Icons.card_giftcard_rounded, color: scheme.onTertiary, size: 24),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              'Ristournes de la mission',
+                              style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                                fontWeight: FontWeight.w800,
+                              ),
+                            ),
+                            const SizedBox(height: 2),
+                            Text(
+                              _ristournes.isNotEmpty
+                                  ? '${_ristournes.where((r) => (r['statut'] ?? '') == 'livree').length} / ${_ristournes.length} livrée(s)'
+                                  : 'Aucune ristourne chargée',
+                              style: Theme.of(context).textTheme.bodySmall?.copyWith(color: scheme.onSurfaceVariant),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
                   ),
                   if (_ristournes.isNotEmpty) ...[
-                    const SizedBox(height: 8),
+                    const SizedBox(height: 12),
                     Builder(builder: (context) {
                       final livrees = _ristournes.where((r) => (r['statut'] ?? '') == 'livree').length;
-                      final totalCs = _ristournes.fold<int>(0, (sum, r) => sum + (int.tryParse('${r['caisses_livrees'] ?? 0}') ?? 0));
+                      final totalCsPrev = _ristournes.fold<int>(0, (sum, r) => sum + (int.tryParse('${r['caisses_prevues'] ?? 0}') ?? 0));
+                      final totalCsLiv = _ristournes.fold<int>(0, (sum, r) => sum + (int.tryParse('${r['caisses_livrees'] ?? 0}') ?? 0));
                       final totalVides = _ristournes.fold<int>(0, (sum, r) => sum + (int.tryParse('${r['caisses_vides_recues'] ?? 0}') ?? 0));
-                      return Row(
+                      double totalMontantRecolte = 0;
+                      for (final r in _ristournes) {
+                        if (r is! Map<String, dynamic>) continue;
+                        final csLiv = int.tryParse('${r['caisses_livrees'] ?? 0}') ?? 0;
+                        final montRist = _asDouble(r['montant_ristourne']);
+                        final confirme = (r['complement_confirme'] ?? 0) == 1;
+                        if (confirme && csLiv > 0) {
+                          final btlPerCs = int.tryParse('${r['bouteilles_par_caisses'] ?? 24}') ?? 24;
+                          final prixCs = _asDouble(r['prix_vente_caisses']);
+                          final prixUnit = _asDouble(r['prix_vente_unitaire']);
+                          final prix = prixCs > 0 ? prixCs : prixUnit * (btlPerCs > 0 ? btlPerCs : 24);
+                          totalMontantRecolte += max(0, csLiv * prix - montRist);
+                        }
+                      }
+                      return Column(
                         children: [
-                          Expanded(child: _summaryTile(label: 'Clients servis', value: '$livrees/${_ristournes.length}', icon: Icons.people_outlined, scheme: scheme)),
-                          const SizedBox(width: 8),
-                          Expanded(child: _summaryTile(label: 'Caisses livrées', value: '$totalCs', icon: Icons.inventory_2_outlined, scheme: scheme)),
-                          const SizedBox(width: 8),
-                          Expanded(child: _summaryTile(label: 'Vides reçues', value: '$totalVides', icon: Icons.replay, scheme: scheme)),
+                          Row(
+                            children: [
+                              Expanded(child: _summaryTile(label: 'Clients servis', value: '$livrees/${_ristournes.length}', icon: Icons.people_outlined, scheme: scheme)),
+                              const SizedBox(width: 8),
+                              Expanded(child: _summaryTile(label: 'Cs prévues / livrées', value: '$totalCsPrev / $totalCsLiv', icon: Icons.inventory_2_outlined, scheme: scheme)),
+                            ],
+                          ),
+                          const SizedBox(height: 8),
+                          Row(
+                            children: [
+                              Expanded(child: _summaryTile(label: 'Vides reçues', value: '$totalVides', icon: Icons.replay, scheme: scheme)),
+                              const SizedBox(width: 8),
+                              Expanded(child: _summaryTile(label: 'Complément récolté', value: _fmtMoney(totalMontantRecolte), icon: Icons.add_card_outlined, scheme: scheme)),
+                            ],
+                          ),
                         ],
                       );
                     }),
@@ -783,88 +908,169 @@ class _SalesPageState extends State<SalesPage> {
                     )
                   else
                     for (final r in _ristournes)
-                    Padding(
-                      padding: const EdgeInsets.only(top: 6, bottom: 6),
-                      child: Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          Expanded(
+                      if (r is Map<String, dynamic>)
+                        Padding(
+                          padding: const EdgeInsets.only(top: 8),
+                          child: Container(
+                            padding: const EdgeInsets.all(14),
+                            decoration: BoxDecoration(
+                              color: scheme.surface,
+                              borderRadius: BorderRadius.circular(18),
+                              border: Border.all(
+                                color: (r['statut'] ?? '') == 'livree'
+                                    ? scheme.primary.withOpacity(0.3)
+                                    : (r['statut'] ?? '') == 'non_livree'
+                                        ? scheme.error.withOpacity(0.3)
+                                        : scheme.outlineVariant,
+                              ),
+                            ),
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                                Text(
-                                  '${r['client_nom'] ?? 'Client'}',
-                                  style: const TextStyle(
-                                    fontWeight: FontWeight.w700,
-                                  ),
-                                ),
-                                if ((r['statut'] ?? '') == 'livree')
-                                  Container(
-                                    margin: const EdgeInsets.only(top: 2),
-                                    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                                    decoration: BoxDecoration(
-                                      color: scheme.primaryContainer,
-                                      borderRadius: BorderRadius.circular(6),
+                                Row(
+                                  children: [
+                                    Expanded(
+                                      child: Column(
+                                        crossAxisAlignment: CrossAxisAlignment.start,
+                                        children: [
+                                          Row(
+                                            children: [
+                                              Expanded(
+                                                child: Text(
+                                                  '${r['client_nom'] ?? 'Client'}',
+                                                  style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 14),
+                                                  maxLines: 1,
+                                                  overflow: TextOverflow.ellipsis,
+                                                ),
+                                              ),
+                                              if (r['numero_client'] != null && r['numero_client'].toString().isNotEmpty) ...[
+                                                const SizedBox(width: 4),
+                                                Text(
+                                                  '(${r['numero_client']})',
+                                                  style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                                                    color: scheme.onSurfaceVariant,
+                                                    fontWeight: FontWeight.w500,
+                                                  ),
+                                                  overflow: TextOverflow.ellipsis,
+                                                ),
+                                              ],
+                                              const SizedBox(width: 6),
+                                              _ristourneBadge(r['statut'] ?? 'en_attente', scheme),
+                                            ],
+                                          ),
+                                          const SizedBox(height: 4),
+                                          Text(
+                                            '${r['produit_nom'] ?? '-'}',
+                                            style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                                              color: scheme.onSurfaceVariant,
+                                              fontWeight: FontWeight.w500,
+                                            ),
+                                          ),
+                                        ],
+                                      ),
                                     ),
-                                    child: Text('Livrée', style: TextStyle(fontSize: 10, color: scheme.onPrimaryContainer, fontWeight: FontWeight.w700)),
-                                  )
-                                else if ((r['statut'] ?? '') == 'non_livree')
-                                  Container(
-                                    margin: const EdgeInsets.only(top: 2),
-                                    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                                    decoration: BoxDecoration(
-                                      color: scheme.errorContainer,
-                                      borderRadius: BorderRadius.circular(6),
+                                    Column(
+                                      crossAxisAlignment: CrossAxisAlignment.end,
+                                      children: [
+                                        Text(
+                                          _fmtMoney(_asDouble(r['montant_ristourne'])),
+                                          style: Theme.of(context).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w800),
+                                        ),
+                                        if (_asDouble(r['montant_livre']) > 0)
+                                          Text(
+                                            'Livré: ${_fmtMoney(_asDouble(r['montant_livre']))}',
+                                            style: Theme.of(context).textTheme.labelSmall?.copyWith(color: scheme.primary),
+                                          ),
+                                      ],
                                     ),
-                                    child: Text('Non livrée', style: TextStyle(fontSize: 10, color: scheme.onErrorContainer, fontWeight: FontWeight.w700)),
-                                  ),
-                                const SizedBox(height: 4),
-                                Text(
-                                  'Ristourne: ${_fmtMoney(_asDouble(r['montant_ristourne']))} · ${r['produit_nom'] ?? '-'}',
-                                  style: Theme.of(context).textTheme.bodySmall,
+                                  ],
                                 ),
-                                const SizedBox(height: 2),
-                                Text(
-                                  'Prévu: ${r['caisses_prevues'] ?? 0} cs · Livré: ${r['caisses_livrees'] ?? 0} cs · Vides: ${r['caisses_vides_recues'] ?? 0}',
-                                  style: Theme.of(context).textTheme.bodySmall?.copyWith(fontWeight: FontWeight.w600),
+                                const SizedBox(height: 8),
+                                Container(
+                                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                                  decoration: BoxDecoration(
+                                    color: scheme.surfaceContainerHighest.withOpacity(0.5),
+                                    borderRadius: BorderRadius.circular(12),
+                                  ),
+                                  child: Wrap(
+                                    spacing: 8,
+                                    runSpacing: 4,
+                                    children: [
+                                      _caseInfoChip('Prévu', '${r['caisses_prevues'] ?? 0}', Icons.plagiarism_outlined, scheme),
+                                      _caseInfoChip('Livré', '${r['caisses_livrees'] ?? 0}', Icons.local_shipping_outlined, scheme),
+                                      _caseInfoChip('Vides', '${r['caisses_vides_recues'] ?? 0}', Icons.replay, scheme),
+                                    ],
+                                  ),
                                 ),
                                 if (_asDouble(r['proposition_montant']) > 0) ...[
-                                  const SizedBox(height: 2),
-                                  Text(
-                                    'Complément: ${_fmtMoney(_asDouble(r['proposition_montant']))}${(r['complement_confirme'] ?? 0) == 1 ? ' ✓ Confirmé' : ' (en attente)'}',
-                                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                                      color: (r['complement_confirme'] ?? 0) == 1 ? scheme.tertiary : scheme.error,
-                                      fontWeight: FontWeight.w600,
+                                  const SizedBox(height: 6),
+                                  Container(
+                                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                                    decoration: BoxDecoration(
+                                      color: (r['complement_confirme'] ?? 0) == 1
+                                          ? scheme.tertiaryContainer.withOpacity(0.5)
+                                          : scheme.errorContainer.withOpacity(0.5),
+                                      borderRadius: BorderRadius.circular(10),
+                                    ),
+                                    child: Wrap(
+                                      spacing: 4,
+                                      runSpacing: 2,
+                                      crossAxisAlignment: WrapCrossAlignment.center,
+                                      children: [
+                                        Icon(
+                                          (r['complement_confirme'] ?? 0) == 1 ? Icons.check_circle_outline : Icons.pending_outlined,
+                                          size: 14,
+                                          color: (r['complement_confirme'] ?? 0) == 1 ? scheme.tertiary : scheme.error,
+                                        ),
+                                        Text(
+                                          'Complément: ${_fmtMoney(_asDouble(r['proposition_montant']))}',
+                                          style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                                            color: (r['complement_confirme'] ?? 0) == 1 ? scheme.tertiary : scheme.error,
+                                            fontWeight: FontWeight.w600,
+                                          ),
+                                        ),
+                                        if ((r['complement_confirme'] ?? 0) == 1)
+                                          Text(
+                                            '✓',
+                                            style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                                              color: scheme.tertiary,
+                                              fontWeight: FontWeight.w700,
+                                            ),
+                                          ),
+                                      ],
                                     ),
                                   ),
                                 ],
-                                if (_asDouble(r['montant_livre']) > 0) ...[
-                                  const SizedBox(height: 2),
-                                  Text(
-                                    'Montant livré: ${_fmtMoney(_asDouble(r['montant_livre']))}',
-                                    style: Theme.of(context).textTheme.bodySmall?.copyWith(color: scheme.primary),
+                                if ((r['statut'] ?? '') != 'livree') ...[
+                                  const SizedBox(height: 10),
+                                  SizedBox(
+                                    width: double.infinity,
+                                    child: FilledButton.tonalIcon(
+                                      onPressed: () => _encaisserRistourne(r),
+                                      icon: const Icon(Icons.local_shipping_outlined, size: 18),
+                                      label: const Text('Livrer cette ristourne'),
+                                    ),
+                                  ),
+                                ] else ...[
+                                  const SizedBox(height: 6),
+                                  Row(
+                                    children: [
+                                      Icon(Icons.check_circle, size: 16, color: scheme.primary),
+                                      const SizedBox(width: 4),
+                                      Text(
+                                        'Ristourne livrée',
+                                        style: Theme.of(context).textTheme.labelMedium?.copyWith(
+                                          color: scheme.primary,
+                                          fontWeight: FontWeight.w700,
+                                        ),
+                                      ),
+                                    ],
                                   ),
                                 ],
                               ],
                             ),
                           ),
-                          const SizedBox(width: 8),
-                          Column(
-                            children: [
-                              FilledButton.tonal(
-                                onPressed: (r['statut'] ?? '') == 'livree' ? null : () => _encaisserRistourne(r),
-                                child: Text((r['statut'] ?? '') == 'livree' ? 'Déjà livrée' : 'Livrer'),
-                              ),
-                              const SizedBox(height: 6),
-                              FilledButton.tonal(
-                                onPressed: () => _payRistourne(r),
-                                child: const Text('Marquer payée'),
-                              ),
-                            ],
-                          ),
-                        ],
-                      ),
-                    ),
+                        ),
                 ],
               ),
             ),

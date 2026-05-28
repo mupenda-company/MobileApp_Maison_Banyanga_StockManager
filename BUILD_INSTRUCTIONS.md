@@ -46,7 +46,7 @@ php scripts/update_app_name.php --env=prod
 > Si la base de données production n'est pas accessible depuis votre machine, utilisez le flag `--name` pour forcer le nom :
 
 ```bash
-php scripts/update_app_name.php --name="Sun City CE Sarl"
+php scripts/update_app_name.php --name="Sun City"
 ```
 
 ### Étape 2 : Lancer le build avec l'URL de production

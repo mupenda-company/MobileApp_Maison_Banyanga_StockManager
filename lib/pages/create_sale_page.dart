@@ -198,6 +198,9 @@ class _CreateSalePageState extends State<CreateSalePage> {
             caPeriode: null,
             ristourneTaux: double.tryParse((payload?['ristourneInfo'] is Map<String, dynamic>) ? (payload?['ristourneInfo'] as Map<String, dynamic>)['taux_applique']?.toString() ?? '' : ''),
             ristourneMontant: double.tryParse((payload?['ristourneInfo'] is Map<String, dynamic>) ? (payload?['ristourneInfo'] as Map<String, dynamic>)['montant_ristourne']?.toString() ?? '' : ''),
+            deductionLocale: double.tryParse((payload?['ristourneInfo'] is Map<String, dynamic>) ? (payload?['ristourneInfo'] as Map<String, dynamic>)['deduction_locale']?.toString() ?? '' : ''),
+            tauxLocal: (payload?['ristourneInfo'] is Map<String, dynamic>) ? int.tryParse((payload?['ristourneInfo'] as Map<String, dynamic>)['taux_local']?.toString() ?? '') : null,
+            montantRistourneNet: double.tryParse((payload?['ristourneInfo'] is Map<String, dynamic>) ? (payload?['ristourneInfo'] as Map<String, dynamic>)['montant_ristourne_net']?.toString() ?? '' : ''),
             ristourneInfoPresent: payload?['ristourneInfo'] is Map<String, dynamic>,
             vendeurNom: vente['created_by_prenom'] == null && vente['created_by_nom'] == null
                 ? null
@@ -536,6 +539,9 @@ class _CreateSalePageState extends State<CreateSalePage> {
       double? caPeriode;
       double? ristourneTaux;
       double? ristourneMontant;
+      double? deductionLocale;
+      int? tauxLocal;
+      double? montantRistourneNet;
       String? vendeurNom;
       bool ristourneInfoPresent = false;
 
@@ -639,6 +645,14 @@ class _CreateSalePageState extends State<CreateSalePage> {
             if (montantBase != 0) {
               ristourneMontant = _toDisplay(montantBase);
             }
+
+            final dedLocale = _asDouble(rist['deduction_locale']);
+            if (dedLocale > 0) {
+              deductionLocale = _toDisplay(dedLocale);
+              tauxLocal = int.tryParse(rist['taux_local']?.toString() ?? '');
+              final montantNetBase = _asDouble(rist['montant_ristourne_net']);
+              montantRistourneNet = _toDisplay(montantNetBase);
+            }
           }
         } catch (_) {
           // Fallback si endpoint facture non dispo
@@ -711,6 +725,9 @@ class _CreateSalePageState extends State<CreateSalePage> {
               caPeriode: caPeriode,
               ristourneTaux: ristourneTaux,
               ristourneMontant: ristourneMontant,
+              deductionLocale: deductionLocale,
+              tauxLocal: tauxLocal,
+              montantRistourneNet: montantRistourneNet,
               ristourneInfoPresent: ristourneInfoPresent,
               vendeurNom: vendeurNom,
               totalHt: _toDisplay(totalHtBase),

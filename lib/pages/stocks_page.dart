@@ -1,3 +1,5 @@
+import 'dart:math';
+
 import 'package:flutter/material.dart';
 import 'package:logis_agent/api/api_client.dart';
 import 'package:logis_agent/config/app_config.dart';
@@ -148,11 +150,23 @@ class _StocksPageState extends State<StocksPage> {
     return bottlesValue / bottlesPerCase;
   }
 
-  Widget _stockCard(Map<String, dynamic> item, ColorScheme scheme) {
+  Widget _stockCard(Map<String, dynamic> item, ColorScheme scheme, {bool isRistourne = false}) {
     final name = (item['nom'] ?? item['name'] ?? item['product'] ?? 'Produit').toString();
     final emplacement = (item['emplacement_nom'] ?? item['location'] ?? item['emplacement'] ?? 'Emplacement').toString();
     final rawQty = _stockCases(item);
     final isLow = rawQty <= 0;
+
+    // For ristourne: calculate initial vs current stock
+    final initialCaisses = isRistourne
+        ? (double.tryParse('${item['quantite_caisses'] ?? 0}') ?? 0)
+        : 0.0;
+    final deliveredCaisses = isRistourne
+        ? (double.tryParse('${item['quantite_vendue'] ?? 0}') ?? 0) /
+          max(1, double.tryParse('${item['bouteilles_par_caisses'] ?? 24}') ?? 24)
+        : 0.0;
+    final progressPct = isRistourne && initialCaisses > 0
+        ? ((initialCaisses - rawQty) / initialCaisses).clamp(0.0, 1.0)
+        : 0.0;
 
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
@@ -174,7 +188,7 @@ class _StocksPageState extends State<StocksPage> {
                 borderRadius: BorderRadius.circular(16),
               ),
               child: Icon(
-                Icons.inventory_2,
+                isLow ? Icons.inventory_2_outlined : Icons.inventory_2,
                 color: isLow ? scheme.onErrorContainer : scheme.onSecondaryContainer,
               ),
             ),
@@ -188,14 +202,14 @@ class _StocksPageState extends State<StocksPage> {
                       Expanded(
                         child: Text(
                           name,
-                          style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 16),
+                          style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 14),
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
                         ),
                       ),
-                      const SizedBox(width: 8),
+                      const SizedBox(width: 6),
                       Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                         decoration: BoxDecoration(
                           color: isLow ? scheme.errorContainer : scheme.primaryContainer,
                           borderRadius: BorderRadius.circular(999),
@@ -204,7 +218,7 @@ class _StocksPageState extends State<StocksPage> {
                           isLow ? 'Stock bas' : 'Disponible',
                           style: TextStyle(
                             color: isLow ? scheme.onErrorContainer : scheme.onPrimaryContainer,
-                            fontSize: 11,
+                            fontSize: 10,
                             fontWeight: FontWeight.w700,
                           ),
                         ),
@@ -232,6 +246,63 @@ class _StocksPageState extends State<StocksPage> {
                       ),
                     ],
                   ),
+                  if (isRistourne && initialCaisses > 0) ...[
+                    const SizedBox(height: 10),
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                      decoration: BoxDecoration(
+                        color: scheme.tertiaryContainer.withOpacity(0.3),
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'Stock ristourne',
+                            style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                              color: scheme.tertiary,
+                              fontWeight: FontWeight.w700,
+                            ),
+                          ),
+                          const SizedBox(height: 6),
+                          Wrap(
+                            spacing: 8,
+                            runSpacing: 4,
+                            children: [
+                              Text(
+                                'Initial: ${initialCaisses.toStringAsFixed(0)} cs',
+                                style: Theme.of(context).textTheme.labelSmall?.copyWith(color: scheme.onSurfaceVariant),
+                              ),
+                              Text(
+                                'Livré: ${deliveredCaisses.toStringAsFixed(1)} cs',
+                                style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                                  color: scheme.primary,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                              Text(
+                                'Restant: ${rawQty.toStringAsFixed(1)} cs',
+                                style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                                  color: isLow ? scheme.error : scheme.tertiary,
+                                  fontWeight: FontWeight.w700,
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 6),
+                          ClipRRect(
+                            borderRadius: BorderRadius.circular(4),
+                            child: LinearProgressIndicator(
+                              value: progressPct,
+                              backgroundColor: scheme.outlineVariant.withOpacity(0.3),
+                              color: isLow ? scheme.error : scheme.tertiary,
+                              minHeight: 6,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
                 ],
               ),
             ),
@@ -368,7 +439,7 @@ class _StocksPageState extends State<StocksPage> {
             ),
           const SizedBox(height: 8),
           for (final item in _stocks)
-            if (item is Map<String, dynamic>) _stockCard(item, scheme),
+            if (item is Map<String, dynamic>) _stockCard(item, scheme, isRistourne: isRistourne),
         ],
       ),
     );

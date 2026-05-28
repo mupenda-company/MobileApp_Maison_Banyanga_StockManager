@@ -49,6 +49,9 @@ class SaleInvoicePage extends StatefulWidget {
   final double? caPeriode;
   final double? ristourneTaux;
   final double? ristourneMontant;
+  final double? deductionLocale;
+  final int? tauxLocal;
+  final double? montantRistourneNet;
   final bool ristourneInfoPresent;
 
   final String? vendeurNom;
@@ -83,6 +86,9 @@ class SaleInvoicePage extends StatefulWidget {
     this.caPeriode,
     this.ristourneTaux,
     this.ristourneMontant,
+    this.deductionLocale,
+    this.tauxLocal,
+    this.montantRistourneNet,
     this.ristourneInfoPresent = false,
     this.vendeurNom,
     required this.totalHt,
@@ -235,7 +241,7 @@ class _SaleInvoicePageState extends State<SaleInvoicePage> {
               ),
             if (hasRistourne)
               pw.Text(
-                'Ristourne: ${(widget.ristourneTaux ?? 0).toStringAsFixed(2)}% (${_fmtAmount(widget.ristourneMontant ?? 0)})',
+                'Ristourne: ${(widget.ristourneTaux ?? 0).toStringAsFixed(2)}% (${_fmtAmount(widget.montantRistourneNet ?? widget.ristourneMontant ?? 0)})',
                 style: const pw.TextStyle(fontSize: 12),
               ),
             pw.SizedBox(height: 6),

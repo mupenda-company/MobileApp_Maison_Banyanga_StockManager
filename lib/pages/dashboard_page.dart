@@ -146,7 +146,7 @@ class _DashboardPageState extends State<DashboardPage> {
                 children: [
                   Text(title, style: Theme.of(context).textTheme.labelMedium?.copyWith(color: scheme.onSurfaceVariant)),
                   const SizedBox(height: 6),
-                  Text(value, style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w700)),
+                  Text(value, style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700), maxLines: 1, overflow: TextOverflow.ellipsis),
                 ],
               ),
             ),
@@ -209,173 +209,6 @@ class _DashboardPageState extends State<DashboardPage> {
     );
   }
 
-  Widget _ristourneStatutBadge(String statut, ColorScheme scheme) {
-    Color bg;
-    Color fg;
-    String label;
-    switch (statut) {
-      case 'livree':
-        bg = scheme.primaryContainer;
-        fg = scheme.onPrimaryContainer;
-        label = 'Livrée';
-        break;
-      case 'non_livree':
-        bg = scheme.errorContainer;
-        fg = scheme.onErrorContainer;
-        label = 'Non livrée';
-        break;
-      default:
-        bg = scheme.tertiaryContainer;
-        fg = scheme.onTertiaryContainer;
-        label = 'En attente';
-    }
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-      decoration: BoxDecoration(color: bg, borderRadius: BorderRadius.circular(6)),
-      child: Text(label, style: TextStyle(fontSize: 10, color: fg, fontWeight: FontWeight.w700)),
-    );
-  }
-
-  Future<void> _encaisserRistourne(dynamic rist) async {
-    if (rist == null) return;
-    final mrId = rist['id'];
-    if (mrId == null) return;
-
-    final caissesPrevues = int.tryParse('${rist['caisses_prevues'] ?? 0}') ?? 0;
-    final caissesLivreesCtrl = TextEditingController(
-      text: '${rist['caisses_livrees'] ?? 0}',
-    );
-    final caissesVidesCtrl = TextEditingController(
-      text: '${rist['caisses_vides_recues'] ?? 0}',
-    );
-    final propositionCtrl = TextEditingController(
-      text: (rist['proposition_montant'] ?? '').toString(),
-    );
-    bool complementConfirme = (rist['complement_confirme'] ?? 0) == 1;
-
-    final result = await showDialog<bool>(
-      context: context,
-      builder: (ctx) {
-        return StatefulBuilder(
-          builder: (ctx, setDialogState) => AlertDialog(
-            title: const Text('Confirmer la livraison'),
-            content: SingleChildScrollView(
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    'Client: ${rist['client_nom'] ?? 'Client'} · Produit: ${rist['produit_nom'] ?? '-'}',
-                    style: Theme.of(ctx).textTheme.bodySmall?.copyWith(fontWeight: FontWeight.w600),
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    'Ristourne: ${_fmtMoney(_asDouble(rist['montant_ristourne']))} · Prévu: $caissesPrevues cs',
-                    style: Theme.of(ctx).textTheme.bodySmall?.copyWith(color: Theme.of(ctx).colorScheme.onSurfaceVariant),
-                  ),
-                  const Divider(height: 20),
-                  TextField(
-                    controller: caissesLivreesCtrl,
-                    keyboardType: TextInputType.number,
-                    decoration: InputDecoration(
-                      labelText: 'Caisses livrées',
-                      hintText: 'Max: $caissesPrevues cs',
-                      border: const OutlineInputBorder(),
-                    ),
-                  ),
-                  const SizedBox(height: 10),
-                  TextField(
-                    controller: caissesVidesCtrl,
-                    keyboardType: TextInputType.number,
-                    decoration: const InputDecoration(
-                      labelText: 'Caisses vides reçues',
-                      helperText: 'Nombre de caisses vides rendues par le client',
-                      border: OutlineInputBorder(),
-                    ),
-                  ),
-                  const Divider(height: 20),
-                  SwitchListTile(
-                    value: complementConfirme,
-                    onChanged: (v) => setDialogState(() => complementConfirme = v),
-                    title: const Text('Complément confirmé'),
-                    subtitle: const Text('Le client a ajouté de l\'argent pour des caisses entières'),
-                    contentPadding: EdgeInsets.zero,
-                    controlAffinity: ListTileControlAffinity.leading,
-                  ),
-                  if (complementConfirme) ...[
-                    const SizedBox(height: 6),
-                    TextField(
-                      controller: propositionCtrl,
-                      keyboardType: TextInputType.numberWithOptions(decimal: true),
-                      decoration: const InputDecoration(
-                        labelText: 'Montant du complément',
-                        helperText: 'Montant ajouté par le client au-delà de la ristourne',
-                        border: OutlineInputBorder(),
-                      ),
-                    ),
-                  ],
-                ],
-              ),
-            ),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.pop(ctx, false),
-                child: const Text('Annuler'),
-              ),
-              FilledButton(
-                onPressed: () => Navigator.pop(ctx, true),
-                child: const Text('Enregistrer'),
-              ),
-            ],
-          ),
-        );
-      },
-    );
-
-    if (result != true) return;
-
-    final caissesLivrees = int.tryParse(caissesLivreesCtrl.text) ?? 0;
-    final caissesVides = int.tryParse(caissesVidesCtrl.text) ?? 0;
-    final proposition = double.tryParse(propositionCtrl.text.replaceAll(',', '.'));
-
-    try {
-      final client = ApiService.instance.createClient();
-      final payload = <String, dynamic>{
-        'user_id': AuthService.instance.session?.agent?.id,
-        'caisses_livrees': caissesLivrees,
-        'caisses_vides_recues': caissesVides,
-        'complement_confirme': complementConfirme ? 1 : 0,
-      };
-      if (complementConfirme && proposition != null) {
-        payload['proposition_montant'] = proposition;
-      }
-
-      await client.postJson(
-        '/api/mobile/mission_ristournes/$mrId/encaisser',
-        payload,
-      );
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Ristourne livrée et encaissement enregistré')),
-        );
-        AppRefreshService.instance.notifyDataChanged();
-        await _load();
-      }
-    } on ApiException catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(e.message)),
-        );
-      }
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(e.toString())),
-        );
-      }
-    }
-  }
-
   @override
   Widget build(BuildContext context) {
     final mission = _data?['mission'] is Map<String, dynamic> ? _data!['mission'] as Map<String, dynamic> : null;
@@ -396,7 +229,10 @@ class _DashboardPageState extends State<DashboardPage> {
     final isRistourne = missionType == 'ristourne';
     final montantRistourneInitial = _asDouble(mission?['montant_ristourne_initial']);
     final montantLivre = _asDouble(mission?['montant_livre']);
+    final montantComplementRecolte = _asDouble(mission?['montant_complement_recolte']);
+    final nbClientsRistourne = int.tryParse('${mission?['nb_clients_ristourne'] ?? 0}') ?? 0;
     final ristournes = _data?['ristournes'] is List ? _data!['ristournes'] as List : const [];
+    final ristournesLivrees = ristournes.where((r) => r is Map<String, dynamic> && (r['statut'] ?? '') == 'livree').length;
 
     final caissesVides = (stock?['caisses_vide'] ?? 0).toString();
     final caissesPleine = (stock?['caisses_pleine'] ?? 0).toString();
@@ -551,7 +387,7 @@ class _DashboardPageState extends State<DashboardPage> {
                 ),
               ),
             ),
-          if (_error == null && isRistourne && ristournes.isNotEmpty)
+          if (_error == null && isRistourne)
             Padding(
               padding: const EdgeInsets.only(top: 12),
               child: Container(
@@ -594,12 +430,12 @@ class _DashboardPageState extends State<DashboardPage> {
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               Text(
-                                'Ristournes à livrer',
+                                'Ristourne',
                                 style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w800),
                               ),
                               const SizedBox(height: 4),
                               Text(
-                                '${ristournes.length} ristourne(s) pour cette mission',
+                                '$ristournesLivrees / $nbClientsRistourne client(s) livré(s)',
                                 style: Theme.of(context).textTheme.bodySmall?.copyWith(color: scheme.onSurfaceVariant),
                               ),
                             ],
@@ -620,6 +456,26 @@ class _DashboardPageState extends State<DashboardPage> {
                         const SizedBox(width: 12),
                         Expanded(
                           child: _metricCard(
+                            title: 'Complément récolté',
+                            value: _fmtMoney(montantComplementRecolte),
+                            icon: Icons.add_card_outlined,
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 10),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: _metricCard(
+                            title: 'Nb clients',
+                            value: '$nbClientsRistourne',
+                            icon: Icons.people_outlined,
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: _metricCard(
                             title: 'Montant livré',
                             value: _fmtMoney(montantLivre),
                             icon: Icons.local_shipping_outlined,
@@ -627,89 +483,6 @@ class _DashboardPageState extends State<DashboardPage> {
                         ),
                       ],
                     ),
-                    const SizedBox(height: 12),
-                    for (final r in ristournes)
-                      if (r is Map<String, dynamic>)
-                        Padding(
-                          padding: const EdgeInsets.only(bottom: 8),
-                          child: Container(
-                            padding: const EdgeInsets.all(12),
-                            decoration: BoxDecoration(
-                              color: scheme.surface,
-                              borderRadius: BorderRadius.circular(16),
-                              border: Border.all(color: scheme.outlineVariant),
-                            ),
-                            child: Row(
-                              children: [
-                                Expanded(
-                                  child: Column(
-                                    crossAxisAlignment: CrossAxisAlignment.start,
-                                    children: [
-                                      Row(
-                                        children: [
-                                          Text(
-                                            '${r['client_nom'] ?? 'Client'}',
-                                            style: const TextStyle(fontWeight: FontWeight.w700),
-                                          ),
-                                          const SizedBox(width: 6),
-                                          _ristourneStatutBadge(r['statut'] ?? 'en_attente', scheme),
-                                        ],
-                                      ),
-                                      const SizedBox(height: 4),
-                                      Text(
-                                        '${r['produit_nom'] ?? '-'} · Prévu: ${r['caisses_prevues'] ?? 0} cs · Livré: ${r['caisses_livrees'] ?? 0} cs · Vides: ${r['caisses_vides_recues'] ?? 0}',
-                                        style: Theme.of(context).textTheme.bodySmall?.copyWith(color: scheme.onSurfaceVariant),
-                                      ),
-                                      if (_asDouble(r['proposition_montant']) > 0) ...[
-                                        const SizedBox(height: 2),
-                                        Text(
-                                          'Complément: ${_fmtMoney(_asDouble(r['proposition_montant']))}${(r['complement_confirme'] ?? 0) == 1 ? ' ✓' : ''}',
-                                          style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                                            color: (r['complement_confirme'] ?? 0) == 1 ? scheme.tertiary : scheme.error,
-                                            fontWeight: FontWeight.w600,
-                                          ),
-                                        ),
-                                      ],
-                                    ],
-                                  ),
-                                ),
-                                Column(
-                                  crossAxisAlignment: CrossAxisAlignment.end,
-                                  children: [
-                                    Text(
-                                      _fmtMoney(_asDouble(r['montant_ristourne'])),
-                                      style: Theme.of(context).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w800),
-                                    ),
-                                    if (_asDouble(r['montant_livre']) > 0)
-                                      Text(
-                                        'Livré: ${_fmtMoney(_asDouble(r['montant_livre']))}',
-                                        style: Theme.of(context).textTheme.labelSmall?.copyWith(color: scheme.primary),
-                                      ),
-                                    const SizedBox(height: 6),
-                                    if ((r['statut'] ?? '') != 'livree')
-                                      FilledButton.tonal(
-                                        onPressed: () => _encaisserRistourne(r),
-                                        style: FilledButton.styleFrom(
-                                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-                                          minimumSize: Size.zero,
-                                          tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                                        ),
-                                        child: const Text('Livrer', style: TextStyle(fontSize: 12)),
-                                      )
-                                    else
-                                      Text(
-                                        '✓ Livrée',
-                                        style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                                          color: scheme.primary,
-                                          fontWeight: FontWeight.w700,
-                                        ),
-                                      ),
-                                  ],
-                                ),
-                              ],
-                            ),
-                          ),
-                        ),
                   ],
                 ),
               ),
