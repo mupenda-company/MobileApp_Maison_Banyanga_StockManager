@@ -46,19 +46,23 @@ php scripts/update_app_name.php --env=prod
 > Si la base de données production n'est pas accessible depuis votre machine, utilisez le flag `--name` pour forcer le nom :
 
 ```bash
-php scripts/update_app_name.php --name="Sun City"
+php scripts/update_app_name.php --name="Banyanga"
 ```
 
 ### Étape 2 : Lancer le build avec l'URL de production
 
 ```bash
-flutter build apk --split-per-abi --dart-define=API_BASE_URL=https://suncitycesarl.com/public
+flutter build apk --split-per-abi --dart-define=API_BASE_URL=https://suncitycesarl.com
+```
+# or
+```bash
+flutter build apk --split-per-abi --dart-define=API_BASE_URL=https://maisonbanyanga.com
 ```
 
 ### En une seule commande
 
 ```bash
-php scripts/update_app_name.php --env=prod && flutter build apk --split-per-abi --dart-define=API_BASE_URL=https://suncitycesarl.com/public
+php scripts/update_app_name.php --env=prod && flutter build apk --split-per-abi --dart-define=API_BASE_URL=https://suncitycesarl.com
 ```
 
 ---
@@ -76,7 +80,7 @@ Exemples :
 
 ```bash
 # Forcer un nom spécifique
-php scripts/update_app_name.php --name="Bralima"
+php scripts/update_app_name.php --name="sun city"
 
 # Utiliser une DB personnalisée
 php scripts/update_app_name.php --host=192.168.1.100 --db=bralima_logistique --user=admin --pass=secret

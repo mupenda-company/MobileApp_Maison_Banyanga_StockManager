@@ -61,8 +61,10 @@ class _CreateSalePageState extends State<CreateSalePage> {
 
   double _toDisplay(double amountBase) {
     if (_devise == _deviseBase) return amountBase;
-    if (_deviseBase == 'CDF' && _devise == 'USD') return amountBase / _tauxChange;
-    if (_deviseBase == 'USD' && _devise == 'CDF') return amountBase * _tauxChange;
+    if (_deviseBase == 'CDF' && _devise == 'USD')
+      return amountBase / _tauxChange;
+    if (_deviseBase == 'USD' && _devise == 'CDF')
+      return amountBase * _tauxChange;
     return amountBase;
   }
 
@@ -117,18 +119,22 @@ class _CreateSalePageState extends State<CreateSalePage> {
     final saleId = int.tryParse(sale['id']?.toString() ?? '');
     if (saleId == null || saleId <= 0) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Vente invalide')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(const SnackBar(content: Text('Vente invalide')));
       }
       return;
     }
 
     try {
       final client = ApiService.instance.createClient();
-      final resp = await client.getJson('${AppConfig.ventePath}/$saleId/facture');
+      final resp = await client.getJson(
+        '${AppConfig.ventePath}/$saleId/facture',
+      );
       final payload = resp is Map<String, dynamic>
-          ? (resp['data'] is Map<String, dynamic> ? resp['data'] as Map<String, dynamic> : resp)
+          ? (resp['data'] is Map<String, dynamic>
+                ? resp['data'] as Map<String, dynamic>
+                : resp)
           : null;
 
       final vente = payload?['vente'];
@@ -140,15 +146,27 @@ class _CreateSalePageState extends State<CreateSalePage> {
         if (details is List) {
           for (final d in details) {
             if (d is! Map<String, dynamic>) continue;
-            final btlParCs = double.tryParse(d['bouteilles_par_caisses']?.toString() ?? '') ?? 24;
+            final btlParCs =
+                double.tryParse(
+                  d['bouteilles_par_caisses']?.toString() ?? '',
+                ) ??
+                24;
             final denom = btlParCs <= 0 ? 24 : btlParCs;
-            final quantite = double.tryParse(d['quantite']?.toString() ?? '') ?? 0;
+            final quantite =
+                double.tryParse(d['quantite']?.toString() ?? '') ?? 0;
             if (quantite <= 0) continue;
-            final caisses = double.tryParse(d['quantite_caisses']?.toString() ?? '') ?? (quantite / denom);
-            final caissesVidesRecues = double.tryParse(d['caisses_vides_recues']?.toString() ?? '') ?? 0;
-            final prixCaisse = double.tryParse(d['prix_caisse']?.toString() ?? '') ??
-                ((double.tryParse(d['prix_unitaire']?.toString() ?? '') ?? 0) * denom);
-            final sousTotal = double.tryParse(d['sous_total']?.toString() ?? '') ?? 0;
+            final caisses =
+                double.tryParse(d['quantite_caisses']?.toString() ?? '') ??
+                (quantite / denom);
+            final caissesVidesRecues =
+                double.tryParse(d['caisses_vides_recues']?.toString() ?? '') ??
+                0;
+            final prixCaisse =
+                double.tryParse(d['prix_caisse']?.toString() ?? '') ??
+                ((double.tryParse(d['prix_unitaire']?.toString() ?? '') ?? 0) *
+                    denom);
+            final sousTotal =
+                double.tryParse(d['sous_total']?.toString() ?? '') ?? 0;
 
             lines.add(
               SaleInvoiceLine(
@@ -176,7 +194,14 @@ class _CreateSalePageState extends State<CreateSalePage> {
           builder: (context) => SaleInvoicePage(
             venteId: saleId,
             numeroFacture: vente['numero_facture']?.toString(),
-            date: DateTime.tryParse((vente['date_vente']?.toString() ?? '').replaceFirst(' ', 'T')) ?? DateTime.now(),
+            date:
+                DateTime.tryParse(
+                  (vente['date_vente']?.toString() ?? '').replaceFirst(
+                    ' ',
+                    'T',
+                  ),
+                ) ??
+                DateTime.now(),
             clientNom: vente['client_nom']?.toString() ?? 'Client',
             clientTelephone: vente['client_telephone']?.toString(),
             clientNumero: vente['client_numero']?.toString(),
@@ -184,27 +209,91 @@ class _CreateSalePageState extends State<CreateSalePage> {
             devise: (params is Map<String, dynamic> && params['devise'] != null)
                 ? params['devise'].toString()
                 : _devise,
-            companyName: params is Map<String, dynamic> ? params['nom_entreprise']?.toString() : null,
-            companyAddress: params is Map<String, dynamic> ? params['adresse']?.toString() : null,
-            companyTelephone: params is Map<String, dynamic> ? params['telephone']?.toString() : null,
-            companyLogo: params is Map<String, dynamic> ? params['logo_url']?.toString() ?? params['logo']?.toString() : null,
-            companyEmail: params is Map<String, dynamic> ? params['email_contact']?.toString() : null,
-            companyContact: params is Map<String, dynamic> ? params['contact']?.toString() : null,
-            companyRccm: params is Map<String, dynamic> ? params['rccm']?.toString() : null,
-            companyIdNat: params is Map<String, dynamic> ? params['id_nat']?.toString() : null,
-            companyNif: params is Map<String, dynamic> ? params['nif']?.toString() : null,
-            companyAccount: params is Map<String, dynamic> ? params['numero_compte']?.toString() : null,
-            produitsCumules: _asDouble(payload?['totalCaissesClient']) > 0 ? _asDouble(payload?['totalCaissesClient']) : null,
+            companyName: params is Map<String, dynamic>
+                ? params['nom_entreprise']?.toString()
+                : null,
+            companyAddress: params is Map<String, dynamic>
+                ? params['adresse']?.toString()
+                : null,
+            companyTelephone: params is Map<String, dynamic>
+                ? params['telephone']?.toString()
+                : null,
+            companyLogo: params is Map<String, dynamic>
+                ? params['logo_url']?.toString() ?? params['logo']?.toString()
+                : null,
+            companyEmail: params is Map<String, dynamic>
+                ? params['email_contact']?.toString()
+                : null,
+            companyContact: params is Map<String, dynamic>
+                ? params['contact']?.toString()
+                : null,
+            companyRccm: params is Map<String, dynamic>
+                ? params['rccm']?.toString()
+                : null,
+            companyIdNat: params is Map<String, dynamic>
+                ? params['id_nat']?.toString()
+                : null,
+            companyNif: params is Map<String, dynamic>
+                ? params['nif']?.toString()
+                : null,
+            companyAccount: params is Map<String, dynamic>
+                ? params['numero_compte']?.toString()
+                : null,
+            produitsCumules: _asDouble(payload?['totalCaissesClient']) > 0
+                ? _asDouble(payload?['totalCaissesClient'])
+                : null,
             caPeriode: null,
-            ristourneTaux: double.tryParse((payload?['ristourneInfo'] is Map<String, dynamic>) ? (payload?['ristourneInfo'] as Map<String, dynamic>)['taux_applique']?.toString() ?? '' : ''),
-            ristourneMontant: double.tryParse((payload?['ristourneInfo'] is Map<String, dynamic>) ? (payload?['ristourneInfo'] as Map<String, dynamic>)['montant_ristourne']?.toString() ?? '' : ''),
-            deductionLocale: double.tryParse((payload?['ristourneInfo'] is Map<String, dynamic>) ? (payload?['ristourneInfo'] as Map<String, dynamic>)['deduction_locale']?.toString() ?? '' : ''),
-            tauxLocal: (payload?['ristourneInfo'] is Map<String, dynamic>) ? int.tryParse((payload?['ristourneInfo'] as Map<String, dynamic>)['taux_local']?.toString() ?? '') : null,
-            montantRistourneNet: double.tryParse((payload?['ristourneInfo'] is Map<String, dynamic>) ? (payload?['ristourneInfo'] as Map<String, dynamic>)['montant_ristourne_net']?.toString() ?? '' : ''),
-            ristourneInfoPresent: payload?['ristourneInfo'] is Map<String, dynamic>,
-            vendeurNom: vente['created_by_prenom'] == null && vente['created_by_nom'] == null
+            ristourneTaux: double.tryParse(
+              (payload?['ristourneInfo'] is Map<String, dynamic>)
+                  ? (payload?['ristourneInfo']
+                                as Map<String, dynamic>)['taux_applique']
+                            ?.toString() ??
+                        ''
+                  : '',
+            ),
+            ristourneMontant: double.tryParse(
+              (payload?['ristourneInfo'] is Map<String, dynamic>)
+                  ? (payload?['ristourneInfo']
+                                as Map<String, dynamic>)['montant_ristourne']
+                            ?.toString() ??
+                        ''
+                  : '',
+            ),
+            deductionLocale: double.tryParse(
+              (payload?['ristourneInfo'] is Map<String, dynamic>)
+                  ? (payload?['ristourneInfo']
+                                as Map<String, dynamic>)['deduction_locale']
+                            ?.toString() ??
+                        ''
+                  : '',
+            ),
+            tauxLocal: (payload?['ristourneInfo'] is Map<String, dynamic>)
+                ? int.tryParse(
+                    (payload?['ristourneInfo']
+                                as Map<String, dynamic>)['taux_local']
+                            ?.toString() ??
+                        '',
+                  )
+                : null,
+            montantRistourneNet: double.tryParse(
+              (payload?['ristourneInfo'] is Map<String, dynamic>)
+                  ? (payload?['ristourneInfo']
+                                as Map<
+                                  String,
+                                  dynamic
+                                >)['montant_ristourne_net']
+                            ?.toString() ??
+                        ''
+                  : '',
+            ),
+            ristourneInfoPresent:
+                payload?['ristourneInfo'] is Map<String, dynamic>,
+            vendeurNom:
+                vente['created_by_prenom'] == null &&
+                    vente['created_by_nom'] == null
                 ? null
-                : '${vente['created_by_prenom'] ?? ''} ${vente['created_by_nom'] ?? ''}'.trim(),
+                : '${vente['created_by_prenom'] ?? ''} ${vente['created_by_nom'] ?? ''}'
+                      .trim(),
             totalHt: _asDouble(vente['total_ht']),
             totalTva: _asDouble(vente['total_tva']),
             totalTtc: _asDouble(vente['total_ttc']),
@@ -215,9 +304,9 @@ class _CreateSalePageState extends State<CreateSalePage> {
       );
     } catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Impression impossible: $e')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Impression impossible: $e')));
     }
   }
 
@@ -226,7 +315,9 @@ class _CreateSalePageState extends State<CreateSalePage> {
   }
 
   bool get _isRistourne {
-    return (AuthService.instance.session?.mission?['type_mission'] ?? 'vente').toString() == 'ristourne';
+    return (AuthService.instance.session?.mission?['type_mission'] ?? 'vente')
+            .toString() ==
+        'ristourne';
   }
 
   String? get _userId {
@@ -242,18 +333,27 @@ class _CreateSalePageState extends State<CreateSalePage> {
     }
 
     final filtered = clients.where((client) {
-      final haystack = [
-        client['nom'],
-        client['telephone'],
-        client['zone_nom'],
-        client['email'],
-        client['adresse'],
-      ].where((value) => value != null).map((value) => value.toString()).join(' ').toLowerCase();
+      final haystack =
+          [
+                client['nom'],
+                client['telephone'],
+                client['zone_nom'],
+                client['email'],
+                client['adresse'],
+              ]
+              .where((value) => value != null)
+              .map((value) => value.toString())
+              .join(' ')
+              .toLowerCase();
       return haystack.contains(term);
     }).toList();
 
-    final selected = clients.where((client) => client['id']?.toString() == _clientId).cast<Map<String, dynamic>>().toList();
-    if (selected.isNotEmpty && !filtered.any((client) => client['id']?.toString() == _clientId)) {
+    final selected = clients
+        .where((client) => client['id']?.toString() == _clientId)
+        .cast<Map<String, dynamic>>()
+        .toList();
+    if (selected.isNotEmpty &&
+        !filtered.any((client) => client['id']?.toString() == _clientId)) {
       filtered.insert(0, selected.first);
     }
 
@@ -263,7 +363,7 @@ class _CreateSalePageState extends State<CreateSalePage> {
   Future<void> _load() async {
     if (AppConfig.apiBaseUrl.isEmpty) {
       setState(() {
-        _error = 'API_BASE_URL non configuré';
+        _error = 'API_BASE_URL non configurÃ©';
       });
       return;
     }
@@ -287,12 +387,18 @@ class _CreateSalePageState extends State<CreateSalePage> {
       final clientsResp = await client.getJson(AppConfig.clientsPath);
       final clientsList = clientsResp is List
           ? clientsResp
-          : (clientsResp is Map<String, dynamic> && clientsResp['data'] is List ? clientsResp['data'] as List : null);
+          : (clientsResp is Map<String, dynamic> && clientsResp['data'] is List
+                ? clientsResp['data'] as List
+                : null);
 
-      final stockResp = await client.getJson('${AppConfig.missionPath}/$missionId/stock');
+      final stockResp = await client.getJson(
+        '${AppConfig.missionPath}/$missionId/stock',
+      );
       final stockList = stockResp is List
           ? stockResp
-          : (stockResp is Map<String, dynamic> && stockResp['data'] is List ? stockResp['data'] as List : null);
+          : (stockResp is Map<String, dynamic> && stockResp['data'] is List
+                ? stockResp['data'] as List
+                : null);
 
       final mappedClients = <Map<String, dynamic>>[];
       for (final c in (clientsList ?? const [])) {
@@ -325,10 +431,14 @@ class _CreateSalePageState extends State<CreateSalePage> {
 
       List<Map<String, dynamic>> mappedSales = [];
       try {
-        final salesResp = await client.getJson('${AppConfig.salesPath}?mission_id=$missionId&date=${Uri.encodeComponent(_currentDayLabel)}');
+        final salesResp = await client.getJson(
+          '${AppConfig.salesPath}?mission_id=$missionId&date=${Uri.encodeComponent(_currentDayLabel)}',
+        );
         final salesList = salesResp is List
             ? salesResp
-            : (salesResp is Map<String, dynamic> && salesResp['data'] is List ? salesResp['data'] as List : null);
+            : (salesResp is Map<String, dynamic> && salesResp['data'] is List
+                  ? salesResp['data'] as List
+                  : null);
 
         for (final s in (salesList ?? const [])) {
           if (s is Map<String, dynamic>) mappedSales.add(s);
@@ -386,8 +496,9 @@ class _CreateSalePageState extends State<CreateSalePage> {
       if (qtyCs <= 0) continue;
 
       final qtyEmptyText = _qtyEmptyControllers[id]?.text ?? '0';
-      final qtyEmptyInput = double.tryParse(qtyEmptyText.replaceAll(',', '.')) ?? 0;
-      total += qtyEmptyInput > qtyCs ? qtyCs : qtyEmptyInput;
+      final qtyEmptyInput =
+          double.tryParse(qtyEmptyText.replaceAll(',', '.')) ?? 0;
+      total += qtyEmptyInput < 0 ? 0 : qtyEmptyInput;
     }
     return total;
   }
@@ -402,12 +513,9 @@ class _CreateSalePageState extends State<CreateSalePage> {
       final qtyCs = double.tryParse(qtyCsText.replaceAll(',', '.')) ?? 0;
       if (qtyCs <= 0) continue;
 
-      final qtyEmptyText = _qtyEmptyControllers[id]?.text ?? '0';
-      final qtyEmptyInput = double.tryParse(qtyEmptyText.replaceAll(',', '.')) ?? 0;
-      final qtyEmpty = qtyEmptyInput > qtyCs ? qtyCs : qtyEmptyInput;
-      total += qtyCs - qtyEmpty;
+      total += qtyCs;
     }
-    return total;
+    return (total - _totalEmballagesRecus).clamp(0, total);
   }
 
   double get _totalCaisses {
@@ -437,14 +545,14 @@ class _CreateSalePageState extends State<CreateSalePage> {
 
     if (userId == null || userId.isEmpty) {
       setState(() {
-        _error = 'Utilisateur non identifié';
+        _error = 'Utilisateur non identifiÃ©';
       });
       return;
     }
 
     if (_clientId == null || _clientId!.isEmpty) {
       setState(() {
-        _error = 'Veuillez sélectionner un client';
+        _error = 'Veuillez sÃ©lectionner un client';
       });
       return;
     }
@@ -458,10 +566,6 @@ class _CreateSalePageState extends State<CreateSalePage> {
       final qtyCs = double.tryParse(qtyCsText.replaceAll(',', '.')) ?? 0;
       if (qtyCs <= 0) continue;
 
-      final qtyEmptyText = _qtyEmptyControllers[id]?.text ?? '0';
-      final qtyEmptyInput = double.tryParse(qtyEmptyText.replaceAll(',', '.')) ?? 0;
-      final qtyEmpty = qtyEmptyInput > qtyCs ? qtyCs : qtyEmptyInput;
-
       final btlParCs = _btlParCaisse(item);
       final qtyBtl = qtyCs * btlParCs;
       final prixCaisseBase = _prixCaisseBase(item);
@@ -471,7 +575,7 @@ class _CreateSalePageState extends State<CreateSalePage> {
         'produit_id': id,
         'quantite': qtyBtl,
         'quantite_caisses': qtyCs,
-        'caisses_vides_recues': qtyEmpty,
+        'caisses_vides_recues': 0,
         'prix_caisse': prixCaisseDisplay,
         'prix_unitaire': prixCaisseDisplay / btlParCs,
       });
@@ -480,6 +584,37 @@ class _CreateSalePageState extends State<CreateSalePage> {
     if (produits.isEmpty) {
       setState(() {
         _error = 'Veuillez saisir au moins un produit';
+      });
+      return;
+    }
+
+    final totalCaissesVendues = produits.fold<double>(
+      0,
+      (sum, p) => sum + _asDouble(p['quantite_caisses']),
+    );
+    final emballagesRecus = <Map<String, dynamic>>[];
+    for (final item in _stock) {
+      final id = int.tryParse(item['id']?.toString() ?? '');
+      if (id == null) continue;
+
+      final qtyEmptyText = _qtyEmptyControllers[id]?.text ?? '0';
+      final qtyEmpty = double.tryParse(qtyEmptyText.replaceAll(',', '.')) ?? 0;
+      if (qtyEmpty <= 0) continue;
+
+      emballagesRecus.add({
+        'produit_id': id,
+        'caisses_recues': qtyEmpty.round(),
+      });
+    }
+
+    final totalEmballagesRecus = emballagesRecus.fold<double>(
+      0,
+      (sum, p) => sum + _asDouble(p['caisses_recues']),
+    );
+    if (totalEmballagesRecus > totalCaissesVendues) {
+      setState(() {
+        _error =
+            'Le total des emballages reçus ne peut pas dépasser les caisses vendues';
       });
       return;
     }
@@ -500,6 +635,7 @@ class _CreateSalePageState extends State<CreateSalePage> {
         'devise': _devise,
         'notes': _notesController.text.trim(),
         'produits': produits,
+        'emballages_recus': emballagesRecus,
       });
 
       Map<String, dynamic>? payload;
@@ -550,9 +686,13 @@ class _CreateSalePageState extends State<CreateSalePage> {
 
       if (venteId > 0) {
         try {
-          final factureResp = await client.getJson('${AppConfig.ventePath}/$venteId/facture');
+          final factureResp = await client.getJson(
+            '${AppConfig.ventePath}/$venteId/facture',
+          );
           final facturePayload = factureResp is Map<String, dynamic>
-              ? (factureResp['data'] is Map<String, dynamic> ? factureResp['data'] as Map<String, dynamic> : factureResp)
+              ? (factureResp['data'] is Map<String, dynamic>
+                    ? factureResp['data'] as Map<String, dynamic>
+                    : factureResp)
               : null;
 
           final vente = facturePayload?['vente'];
@@ -562,7 +702,8 @@ class _CreateSalePageState extends State<CreateSalePage> {
             companyName = params['nom_entreprise']?.toString();
             companyAddress = params['adresse']?.toString();
             companyTelephone = params['telephone']?.toString();
-            companyLogo = params['logo_url']?.toString() ?? params['logo']?.toString();
+            companyLogo =
+                params['logo_url']?.toString() ?? params['logo']?.toString();
             companyEmail = params['email_contact']?.toString();
             companyContact = params['contact']?.toString();
             companyRccm = params['rccm']?.toString();
@@ -577,7 +718,9 @@ class _CreateSalePageState extends State<CreateSalePage> {
             clientNumero = vente['client_numero']?.toString();
             zoneNom = vente['zone_nom']?.toString();
 
-            final cbn = '${vente['created_by_prenom'] ?? ''} ${vente['created_by_nom'] ?? ''}'.trim();
+            final cbn =
+                '${vente['created_by_prenom'] ?? ''} ${vente['created_by_nom'] ?? ''}'
+                    .trim();
             vendeurNom = cbn.isEmpty ? null : cbn;
 
             final dateStr = vente['date_vente']?.toString();
@@ -595,7 +738,9 @@ class _CreateSalePageState extends State<CreateSalePage> {
 
                 final btlParCs = _asDouble(d['bouteilles_par_caisses']);
                 final denom = btlParCs <= 0 ? 24 : btlParCs;
-                final caisses = _asDouble(d['quantite_caisses']) > 0 ? _asDouble(d['quantite_caisses']) : (quantite / denom);
+                final caisses = _asDouble(d['quantite_caisses']) > 0
+                    ? _asDouble(d['quantite_caisses'])
+                    : (quantite / denom);
                 final caissesVidesRecues = _asDouble(d['caisses_vides_recues']);
                 final detteCaisses = caisses - caissesVidesRecues;
 
@@ -618,7 +763,9 @@ class _CreateSalePageState extends State<CreateSalePage> {
             }
           }
 
-          final totalCaissesClientBase = _asDouble(facturePayload?['totalCaissesClient']);
+          final totalCaissesClientBase = _asDouble(
+            facturePayload?['totalCaissesClient'],
+          );
           if (totalCaissesClientBase > 0) {
             produitsCumules = totalCaissesClientBase;
           }
@@ -660,7 +807,8 @@ class _CreateSalePageState extends State<CreateSalePage> {
       }
 
       if (lignes.isEmpty) {
-        clientNom = _clients
+        clientNom =
+            _clients
                 .firstWhere(
                   (c) => c['id']?.toString() == _clientId,
                   orElse: () => const <String, dynamic>{},
@@ -781,7 +929,11 @@ class _CreateSalePageState extends State<CreateSalePage> {
               TextButton(
                 onPressed: _saving ? null : _save,
                 child: _saving
-                    ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2))
+                    ? const SizedBox(
+                        width: 16,
+                        height: 16,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      )
                     : const Text('Enregistrer'),
               ),
           ],
@@ -803,18 +955,23 @@ class _CreateSalePageState extends State<CreateSalePage> {
                   ),
                   child: Column(
                     children: [
-                      Icon(Icons.block_rounded, size: 48, color: scheme.onErrorContainer),
+                      Icon(
+                        Icons.block_rounded,
+                        size: 48,
+                        color: scheme.onErrorContainer,
+                      ),
                       const SizedBox(height: 16),
                       Text(
                         'Mission de ristourne',
-                        style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                          fontWeight: FontWeight.w800,
-                          color: scheme.onErrorContainer,
-                        ),
+                        style: Theme.of(context).textTheme.titleMedium
+                            ?.copyWith(
+                              fontWeight: FontWeight.w800,
+                              color: scheme.onErrorContainer,
+                            ),
                       ),
                       const SizedBox(height: 8),
                       Text(
-                        'Les ventes ne sont pas possibles sur une mission de ristourne. Utilisez l\'onglet Ristournes pour gérer les livraisons.',
+                        'Les ventes ne sont pas possibles sur une mission de ristourne. Utilisez l\'onglet Ristournes pour gÃ©rer les livraisons.',
                         textAlign: TextAlign.center,
                         style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                           color: scheme.onErrorContainer,
@@ -824,361 +981,460 @@ class _CreateSalePageState extends State<CreateSalePage> {
                   ),
                 )
               else ...[
-              if (_loading) const LinearProgressIndicator(minHeight: 2),
-              if (_error != null)
-                Padding(
-                  padding: const EdgeInsets.only(top: 12),
-                  child: Text(
-                    _error!,
-                    style: TextStyle(color: scheme.error),
+                if (_loading) const LinearProgressIndicator(minHeight: 2),
+                if (_error != null)
+                  Padding(
+                    padding: const EdgeInsets.only(top: 12),
+                    child: Text(_error!, style: TextStyle(color: scheme.error)),
                   ),
-                ),
-              const SizedBox(height: 10),
-              Card(
-                child: Padding(
-                  padding: const EdgeInsets.all(14),
-                  child: Column(
-                    children: [
-                      TextField(
-                        enabled: !_saving,
-                        onChanged: (value) {
-                          setState(() {
-                            _clientSearch = value;
-                          });
-                        },
-                        decoration: InputDecoration(
-                          labelText: 'Rechercher un client',
-                          hintText: 'Nom, téléphone, zone...',
-                          prefixIcon: const Icon(Icons.search_rounded),
-                          suffixIcon: _clientSearch.isEmpty
+                const SizedBox(height: 10),
+                Card(
+                  child: Padding(
+                    padding: const EdgeInsets.all(14),
+                    child: Column(
+                      children: [
+                        TextField(
+                          enabled: !_saving,
+                          onChanged: (value) {
+                            setState(() {
+                              _clientSearch = value;
+                            });
+                          },
+                          decoration: InputDecoration(
+                            labelText: 'Rechercher un client',
+                            hintText: 'Nom, tÃ©lÃ©phone, zone...',
+                            prefixIcon: const Icon(Icons.search_rounded),
+                            suffixIcon: _clientSearch.isEmpty
+                                ? null
+                                : IconButton(
+                                    icon: const Icon(Icons.clear_rounded),
+                                    onPressed: () {
+                                      setState(() {
+                                        _clientSearch = '';
+                                      });
+                                    },
+                                  ),
+                          ),
+                        ),
+                        const SizedBox(height: 12),
+                        DropdownButtonFormField<String>(
+                          isExpanded: true,
+                          key: ValueKey(_clientId),
+                          initialValue: _clientId,
+                          selectedItemBuilder: (context) {
+                            return _filteredClients
+                                .map(
+                                  (c) => Align(
+                                    alignment: Alignment.centerLeft,
+                                    child: Text(
+                                      (c['nom'] ?? c['name'] ?? 'Client')
+                                          .toString(),
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
+                                      softWrap: false,
+                                    ),
+                                  ),
+                                )
+                                .toList();
+                          },
+                          items: [
+                            for (final c in _filteredClients)
+                              DropdownMenuItem<String>(
+                                value: c['id']?.toString(),
+                                child: Text(
+                                  (c['nom'] ?? c['name'] ?? 'Client')
+                                      .toString(),
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                  softWrap: false,
+                                ),
+                              ),
+                          ],
+                          onChanged: _saving
                               ? null
-                              : IconButton(
-                                  icon: const Icon(Icons.clear_rounded),
-                                  onPressed: () {
-                                    setState(() {
-                                      _clientSearch = '';
-                                    });
-                                  },
-                                ),
+                              : (value) {
+                                  setState(() {
+                                    _clientId = value;
+                                  });
+                                },
+                          decoration: const InputDecoration(
+                            labelText: 'Client',
+                          ),
                         ),
-                      ),
-                      const SizedBox(height: 12),
-                      DropdownButtonFormField<String>(
-                        isExpanded: true,
-                        key: ValueKey(_clientId),
-                        initialValue: _clientId,
-                        selectedItemBuilder: (context) {
-                          return _filteredClients
-                              .map(
-                                (c) => Align(
-                                  alignment: Alignment.centerLeft,
-                                  child: Text(
-                                    (c['nom'] ?? c['name'] ?? 'Client').toString(),
-                                    maxLines: 1,
-                                    overflow: TextOverflow.ellipsis,
-                                    softWrap: false,
-                                  ),
-                                ),
-                              )
-                              .toList();
-                        },
-                        items: [
-                          for (final c in _filteredClients)
-                            DropdownMenuItem<String>(
-                              value: c['id']?.toString(),
-                              child: Text(
-                                (c['nom'] ?? c['name'] ?? 'Client').toString(),
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
-                                softWrap: false,
-                              ),
-                            ),
-                        ],
-                        onChanged: _saving
-                            ? null
-                            : (value) {
-                                setState(() {
-                                  _clientId = value;
-                                });
-                              },
-                        decoration: const InputDecoration(
-                          labelText: 'Client',
+                        const SizedBox(height: 12),
+                        TextField(
+                          controller: _notesController,
+                          enabled: !_saving,
+                          minLines: 1,
+                          maxLines: 3,
+                          decoration: const InputDecoration(labelText: 'Notes'),
                         ),
-                      ),
-                      const SizedBox(height: 12),
-                      TextField(
-                        controller: _notesController,
-                        enabled: !_saving,
-                        minLines: 1,
-                        maxLines: 3,
-                        decoration: const InputDecoration(
-                          labelText: 'Notes',
-                        ),
-                      ),
-                      const SizedBox(height: 12),
-                      LayoutBuilder(
-                        builder: (context, constraints) {
-                          final compact = constraints.maxWidth < 520;
+                        const SizedBox(height: 12),
+                        LayoutBuilder(
+                          builder: (context, constraints) {
+                            final compact = constraints.maxWidth < 520;
 
-                          final totalCard = Container(
-                            width: compact ? double.infinity : null,
-                            padding: const EdgeInsets.all(12),
-                            decoration: BoxDecoration(
-                              color: scheme.surfaceContainerHighest,
-                              borderRadius: BorderRadius.circular(14),
-                            ),
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text('Total (approx.)', style: Theme.of(context).textTheme.labelMedium?.copyWith(color: scheme.onSurfaceVariant)),
-                                const SizedBox(height: 6),
-                                Text(
-                                  _fmtAmount(totalDisplay),
-                                  style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w700),
-                                ),
-                                const SizedBox(height: 4),
-                                Text(
-                                  'Caisses totales: ${totalCaisses.toStringAsFixed(1)} cs',
-                                  style: Theme.of(context).textTheme.bodySmall?.copyWith(color: scheme.onSurfaceVariant),
-                                ),
-                                const SizedBox(height: 4),
-                                Text(
-                                  'Emballages reçus: ${totalEmballagesRecus.toStringAsFixed(1)} cs  |  Dette: ${totalDetteEmballages.toStringAsFixed(1)} cs',
-                                  style: Theme.of(context).textTheme.bodySmall?.copyWith(color: scheme.onSurfaceVariant),
-                                ),
-                              ],
-                            ),
-                          );
-
-                          final currencyChip = Chip(label: Text('Devise: $_devise'));
-
-                          if (compact) {
-                            return Column(
-                              crossAxisAlignment: CrossAxisAlignment.stretch,
-                              children: [
-                                totalCard,
-                                const SizedBox(height: 10),
-                                Align(alignment: Alignment.centerLeft, child: currencyChip),
-                              ],
-                            );
-                          }
-
-                          return Row(
-                            children: [
-                              Expanded(child: totalCard),
-                              const SizedBox(width: 10),
-                              currencyChip,
-                            ],
-                          );
-                        },
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-              const SizedBox(height: 12),
-              Text(
-                'Produits',
-                style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700),
-              ),
-              const SizedBox(height: 8),
-              for (final item in _stock)
-                Padding(
-                  padding: const EdgeInsets.only(bottom: 10),
-                  child: Card(
-                    child: Padding(
-                      padding: const EdgeInsets.all(12),
-                      child: Builder(
-                        builder: (context) {
-                          final stockActuelCs = _asDouble(item['stock_actuel_caisses']);
-                          final stockActuelAlias = _asDouble(item['stock_actuel']);
-                          final btlParCs = _btlParCaisse(item);
-                          final stockActuelDisplay = stockActuelCs > 0 ? stockActuelCs : (stockActuelAlias > 0 ? stockActuelAlias : (_asDouble(item['stock_actuel_bouteilles']) / btlParCs));
-                          final prixCaisseDisplay = _toDisplay(_prixCaisseBase(item));
-                          final id = int.tryParse(item['id']?.toString() ?? '');
-                          final qtyCsText = id == null ? '0' : (_qtyCsControllers[id]?.text ?? '0');
-                          final qtyCs = _asDouble(qtyCsText.replaceAll(',', '.'));
-                          final qtyEmptyText = id == null ? '0' : (_qtyEmptyControllers[id]?.text ?? '0');
-                          final qtyEmptyInput = _asDouble(qtyEmptyText.replaceAll(',', '.'));
-                          final qtyEmpty = qtyEmptyInput > qtyCs ? qtyCs : qtyEmptyInput;
-                          final totalLigne = qtyCs * prixCaisseDisplay;
-                          final stockInsuffisant = qtyCs > stockActuelDisplay;
-                          final detteEmballages = qtyCs - qtyEmpty;
-
-                          final qtyCsController = () {
-                            final id = int.tryParse(item['id']?.toString() ?? '');
-                            return id == null ? null : _qtyCsControllers[id];
-                          }();
-                          final qtyEmptyController = () {
-                            final id = int.tryParse(item['id']?.toString() ?? '');
-                            return id == null ? null : _qtyEmptyControllers[id];
-                          }();
-
-                          return Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                (item['nom'] ?? 'Produit').toString(),
-                                style: const TextStyle(fontWeight: FontWeight.w600),
-                              ),
-                              const SizedBox(height: 4),
-                              Text(
-                                'Stock mission disponible: ${stockActuelDisplay.toStringAsFixed(1)} cs  |  Prix caisse: ${_fmtAmount(prixCaisseDisplay)}',
-                                style: Theme.of(context).textTheme.bodySmall?.copyWith(color: scheme.onSurfaceVariant),
-                              ),
-                              const SizedBox(height: 2),
-                              Text(
-                                'Caisses saisies: ${qtyCs.toStringAsFixed(1)} cs  |  Total ligne: ${_fmtAmount(totalLigne)}',
-                                style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                                      color: scheme.primary,
-                                      fontWeight: FontWeight.w600,
-                                    ),
-                              ),
-                              const SizedBox(height: 2),
-                              Text(
-                                'Emballages reçus: ${qtyEmpty.toStringAsFixed(1)} cs  |  Dette: ${detteEmballages.toStringAsFixed(1)} cs',
-                                style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                                      color: scheme.onSurfaceVariant,
-                                      fontWeight: FontWeight.w600,
-                                    ),
-                              ),
-                              if (stockInsuffisant) ...[
-                                const SizedBox(height: 2),
-                                Text(
-                                  'Stock mission insuffisant: ${qtyCs.toStringAsFixed(1)} cs demandées / ${stockActuelDisplay.toStringAsFixed(1)} cs disponibles',
-                                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                                        color: scheme.error,
-                                        fontWeight: FontWeight.w700,
-                                      ),
-                                ),
-                              ],
-                              const SizedBox(height: 10),
-                              Row(
-                                children: [
-                                  Expanded(
-                                    child: TextField(
-                                      controller: qtyCsController,
-                                      enabled: !_saving,
-                                      keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                                      decoration: const InputDecoration(
-                                        labelText: 'Caisses',
-                                      ),
-                                    ),
-                                  ),
-                                  const SizedBox(width: 10),
-                                  Expanded(
-                                    child: TextField(
-                                      controller: qtyEmptyController,
-                                      enabled: !_saving,
-                                      keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                                      decoration: const InputDecoration(
-                                        labelText: 'Vides',
-                                      ),
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ],
-                          );
-                        },
-                      ),
-                    ),
-                  ),
-                ),
-              const SizedBox(height: 6),
-              const SizedBox(height: 8),
-              Text(
-                'Historique des ventes récentes',
-                style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700),
-              ),
-              const SizedBox(height: 8),
-              Card(
-                child: Padding(
-                  padding: const EdgeInsets.all(12),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      if (_recentSales.isEmpty)
-                        Text(
-                          'Aucune vente enregistrée aujourd’hui.',
-                          style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: scheme.onSurfaceVariant),
-                        )
-                      else
-                        for (final sale in _recentSales.take(8))
-                          Padding(
-                            padding: const EdgeInsets.only(bottom: 10),
-                            child: Container(
+                            final totalCard = Container(
+                              width: compact ? double.infinity : null,
                               padding: const EdgeInsets.all(12),
                               decoration: BoxDecoration(
-                                color: scheme.surface,
-                                borderRadius: BorderRadius.circular(16),
-                                border: Border.all(color: scheme.outlineVariant),
+                                color: scheme.surfaceContainerHighest,
+                                borderRadius: BorderRadius.circular(14),
                               ),
                               child: Column(
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
-                                  Row(
-                                    crossAxisAlignment: CrossAxisAlignment.start,
-                                    children: [
-                                      Container(
-                                        width: 40,
-                                        height: 40,
-                                        decoration: BoxDecoration(
-                                          color: scheme.primaryContainer,
-                                          borderRadius: BorderRadius.circular(12),
+                                  Text(
+                                    'Total (approx.)',
+                                    style: Theme.of(context)
+                                        .textTheme
+                                        .labelMedium
+                                        ?.copyWith(
+                                          color: scheme.onSurfaceVariant,
                                         ),
-                                        child: Icon(Icons.receipt_long, color: scheme.onPrimaryContainer, size: 20),
-                                      ),
-                                      const SizedBox(width: 10),
-                                      Expanded(
-                                        child: Column(
-                                          crossAxisAlignment: CrossAxisAlignment.start,
-                                          children: [
-                                            Text(
-                                              (sale['numero_facture'] ?? sale['reference'] ?? 'Vente').toString(),
-                                              style: const TextStyle(fontWeight: FontWeight.w700),
-                                            ),
-                                            const SizedBox(height: 2),
-                                            Text(
-                                              '${(sale['client_nom'] ?? 'Client').toString()} · Caisses: ${(sale['caisses_vendues'] ?? 0).toString()}',
-                                              style: Theme.of(context).textTheme.bodySmall?.copyWith(color: scheme.onSurfaceVariant),
-                                            ),
-                                            const SizedBox(height: 2),
-                                            Text(
-                                              'Heure: ${_formatSaleTime(sale['date_vente']?.toString())}',
-                                              style: Theme.of(context).textTheme.bodySmall?.copyWith(color: scheme.onSurfaceVariant),
-                                            ),
-                                          ],
-                                        ),
-                                      ),
-                                    ],
                                   ),
-                                  const SizedBox(height: 10),
-                                  Row(
-                                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                                    children: [
-                                      Text(
-                                        _fmtAmount(_toDisplay(_asDouble(sale['total_ttc']))),
-                                        style: const TextStyle(fontWeight: FontWeight.w700),
-                                      ),
-                                      IconButton.filledTonal(
-                                        visualDensity: VisualDensity.compact,
-                                        onPressed: () => _openInvoice(sale),
-                                        icon: const Icon(Icons.print_rounded),
-                                        tooltip: 'Imprimer la facture',
-                                      ),
-                                    ],
+                                  const SizedBox(height: 6),
+                                  Text(
+                                    _fmtAmount(totalDisplay),
+                                    style: Theme.of(context)
+                                        .textTheme
+                                        .titleLarge
+                                        ?.copyWith(fontWeight: FontWeight.w700),
+                                  ),
+                                  const SizedBox(height: 4),
+                                  Text(
+                                    'Caisses totales: ${totalCaisses.toStringAsFixed(1)} cs',
+                                    style: Theme.of(context).textTheme.bodySmall
+                                        ?.copyWith(
+                                          color: scheme.onSurfaceVariant,
+                                        ),
+                                  ),
+                                  const SizedBox(height: 4),
+                                  Text(
+                                    'Emballages reçus: ${totalEmballagesRecus.toStringAsFixed(1)} cs  |  Dette: ${totalDetteEmballages.toStringAsFixed(1)} cs',
+                                    style: Theme.of(context).textTheme.bodySmall
+                                        ?.copyWith(
+                                          color: scheme.onSurfaceVariant,
+                                        ),
                                   ),
                                 ],
                               ),
-                            ),
-                          ),
-                    ],
+                            );
+
+                            final currencyChip = Chip(
+                              label: Text('Devise: $_devise'),
+                            );
+
+                            if (compact) {
+                              return Column(
+                                crossAxisAlignment: CrossAxisAlignment.stretch,
+                                children: [
+                                  totalCard,
+                                  const SizedBox(height: 10),
+                                  Align(
+                                    alignment: Alignment.centerLeft,
+                                    child: currencyChip,
+                                  ),
+                                ],
+                              );
+                            }
+
+                            return Row(
+                              children: [
+                                Expanded(child: totalCard),
+                                const SizedBox(width: 10),
+                                currencyChip,
+                              ],
+                            );
+                          },
+                        ),
+                      ],
+                    ),
                   ),
                 ),
-              ),
-            ],
+                const SizedBox(height: 12),
+                Text(
+                  'Produits',
+                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                for (final item in _stock)
+                  Padding(
+                    padding: const EdgeInsets.only(bottom: 10),
+                    child: Card(
+                      child: Padding(
+                        padding: const EdgeInsets.all(12),
+                        child: Builder(
+                          builder: (context) {
+                            final stockActuelCs = _asDouble(
+                              item['stock_actuel_caisses'],
+                            );
+                            final stockActuelAlias = _asDouble(
+                              item['stock_actuel'],
+                            );
+                            final btlParCs = _btlParCaisse(item);
+                            final stockActuelDisplay = stockActuelCs > 0
+                                ? stockActuelCs
+                                : (stockActuelAlias > 0
+                                      ? stockActuelAlias
+                                      : (_asDouble(
+                                              item['stock_actuel_bouteilles'],
+                                            ) /
+                                            btlParCs));
+                            final prixCaisseDisplay = _toDisplay(
+                              _prixCaisseBase(item),
+                            );
+                            final id = int.tryParse(
+                              item['id']?.toString() ?? '',
+                            );
+                            final qtyCsText = id == null
+                                ? '0'
+                                : (_qtyCsControllers[id]?.text ?? '0');
+                            final qtyCs = _asDouble(
+                              qtyCsText.replaceAll(',', '.'),
+                            );
+                            final qtyEmptyText = id == null
+                                ? '0'
+                                : (_qtyEmptyControllers[id]?.text ?? '0');
+                            final qtyEmpty = _asDouble(
+                              qtyEmptyText.replaceAll(',', '.'),
+                            ).clamp(0, double.infinity);
+                            final totalLigne = qtyCs * prixCaisseDisplay;
+                            final stockInsuffisant = qtyCs > stockActuelDisplay;
+
+                            final qtyCsController = () {
+                              final id = int.tryParse(
+                                item['id']?.toString() ?? '',
+                              );
+                              return id == null ? null : _qtyCsControllers[id];
+                            }();
+                            final qtyEmptyController = () {
+                              final id = int.tryParse(
+                                item['id']?.toString() ?? '',
+                              );
+                              return id == null
+                                  ? null
+                                  : _qtyEmptyControllers[id];
+                            }();
+
+                            return Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  (item['nom'] ?? 'Produit').toString(),
+                                  style: const TextStyle(
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                ),
+                                const SizedBox(height: 4),
+                                Text(
+                                  'Stock mission disponible: ${stockActuelDisplay.toStringAsFixed(1)} cs  |  Prix caisse: ${_fmtAmount(prixCaisseDisplay)}',
+                                  style: Theme.of(context).textTheme.bodySmall
+                                      ?.copyWith(
+                                        color: scheme.onSurfaceVariant,
+                                      ),
+                                ),
+                                const SizedBox(height: 2),
+                                Text(
+                                  'Caisses saisies: ${qtyCs.toStringAsFixed(1)} cs  |  Total ligne: ${_fmtAmount(totalLigne)}',
+                                  style: Theme.of(context).textTheme.bodySmall
+                                      ?.copyWith(
+                                        color: scheme.primary,
+                                        fontWeight: FontWeight.w600,
+                                      ),
+                                ),
+                                const SizedBox(height: 2),
+                                Text(
+                                  'Emballages reçus pour ce produit: ${qtyEmpty.toStringAsFixed(1)} cs',
+                                  style: Theme.of(context).textTheme.bodySmall
+                                      ?.copyWith(
+                                        color: scheme.onSurfaceVariant,
+                                        fontWeight: FontWeight.w600,
+                                      ),
+                                ),
+                                if (stockInsuffisant) ...[
+                                  const SizedBox(height: 2),
+                                  Text(
+                                    'Stock mission insuffisant: ${qtyCs.toStringAsFixed(1)} cs demandées / ${stockActuelDisplay.toStringAsFixed(1)} cs disponibles',
+                                    style: Theme.of(context).textTheme.bodySmall
+                                        ?.copyWith(
+                                          color: scheme.error,
+                                          fontWeight: FontWeight.w700,
+                                        ),
+                                  ),
+                                ],
+                                const SizedBox(height: 10),
+                                Row(
+                                  children: [
+                                    Expanded(
+                                      child: TextField(
+                                        controller: qtyCsController,
+                                        enabled: !_saving,
+                                        keyboardType:
+                                            const TextInputType.numberWithOptions(
+                                              decimal: true,
+                                            ),
+                                        decoration: const InputDecoration(
+                                          labelText: 'Caisses',
+                                        ),
+                                      ),
+                                    ),
+                                    const SizedBox(width: 10),
+                                    Expanded(
+                                      child: TextField(
+                                        controller: qtyEmptyController,
+                                        enabled: !_saving,
+                                        keyboardType:
+                                            const TextInputType.numberWithOptions(
+                                              decimal: true,
+                                            ),
+                                        decoration: const InputDecoration(
+                                          labelText: 'Vides',
+                                        ),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ],
+                            );
+                          },
+                        ),
+                      ),
+                    ),
+                  ),
+                const SizedBox(height: 6),
+                const SizedBox(height: 8),
+                Text(
+                  'Historique des ventes récentes',
+                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Card(
+                  child: Padding(
+                    padding: const EdgeInsets.all(12),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        if (_recentSales.isEmpty)
+                          Text(
+                            'Aucune vente enregistrée aujourd\'hui.',
+                            style: Theme.of(context).textTheme.bodyMedium
+                                ?.copyWith(color: scheme.onSurfaceVariant),
+                          )
+                        else
+                          for (final sale in _recentSales.take(8))
+                            Padding(
+                              padding: const EdgeInsets.only(bottom: 10),
+                              child: Container(
+                                padding: const EdgeInsets.all(12),
+                                decoration: BoxDecoration(
+                                  color: scheme.surface,
+                                  borderRadius: BorderRadius.circular(16),
+                                  border: Border.all(
+                                    color: scheme.outlineVariant,
+                                  ),
+                                ),
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Row(
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.start,
+                                      children: [
+                                        Container(
+                                          width: 40,
+                                          height: 40,
+                                          decoration: BoxDecoration(
+                                            color: scheme.primaryContainer,
+                                            borderRadius: BorderRadius.circular(
+                                              12,
+                                            ),
+                                          ),
+                                          child: Icon(
+                                            Icons.receipt_long,
+                                            color: scheme.onPrimaryContainer,
+                                            size: 20,
+                                          ),
+                                        ),
+                                        const SizedBox(width: 10),
+                                        Expanded(
+                                          child: Column(
+                                            crossAxisAlignment:
+                                                CrossAxisAlignment.start,
+                                            children: [
+                                              Text(
+                                                (sale['numero_facture'] ??
+                                                        sale['reference'] ??
+                                                        'Vente')
+                                                    .toString(),
+                                                style: const TextStyle(
+                                                  fontWeight: FontWeight.w700,
+                                                ),
+                                              ),
+                                              const SizedBox(height: 2),
+                                              Text(
+                                                '${(sale['client_nom'] ?? 'Client').toString()} Â· Caisses: ${(sale['caisses_vendues'] ?? 0).toString()}',
+                                                style: Theme.of(context)
+                                                    .textTheme
+                                                    .bodySmall
+                                                    ?.copyWith(
+                                                      color: scheme
+                                                          .onSurfaceVariant,
+                                                    ),
+                                              ),
+                                              const SizedBox(height: 2),
+                                              Text(
+                                                'Heure: ${_formatSaleTime(sale['date_vente']?.toString())}',
+                                                style: Theme.of(context)
+                                                    .textTheme
+                                                    .bodySmall
+                                                    ?.copyWith(
+                                                      color: scheme
+                                                          .onSurfaceVariant,
+                                                    ),
+                                              ),
+                                            ],
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                    const SizedBox(height: 10),
+                                    Row(
+                                      mainAxisAlignment:
+                                          MainAxisAlignment.spaceBetween,
+                                      children: [
+                                        Text(
+                                          _fmtAmount(
+                                            _toDisplay(
+                                              _asDouble(sale['total_ttc']),
+                                            ),
+                                          ),
+                                          style: const TextStyle(
+                                            fontWeight: FontWeight.w700,
+                                          ),
+                                        ),
+                                        IconButton.filledTonal(
+                                          visualDensity: VisualDensity.compact,
+                                          onPressed: () => _openInvoice(sale),
+                                          icon: const Icon(Icons.print_rounded),
+                                          tooltip: 'Imprimer la facture',
+                                        ),
+                                      ],
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ),
+                      ],
+                    ),
+                  ),
+                ),
               ],
+            ],
           ),
         ),
       ),
