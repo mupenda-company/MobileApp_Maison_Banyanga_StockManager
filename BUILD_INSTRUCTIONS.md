@@ -58,6 +58,10 @@ flutter build apk --split-per-abi --dart-define=API_BASE_URL=https://suncitycesa
 ```bash
 flutter build apk --split-per-abi --dart-define=API_BASE_URL=https://maisonbanyanga.com
 ```
+# or
+```bash
+flutter build apk --split-per-abi --dart-define=API_BASE_URL=https://mbmugabo.com
+```
 
 ### En une seule commande
 
