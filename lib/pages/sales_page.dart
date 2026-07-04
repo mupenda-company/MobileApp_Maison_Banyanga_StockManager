@@ -22,6 +22,7 @@ class _SalesPageState extends State<SalesPage> {
   String? _error;
   List<dynamic> _sales = const [];
   List<dynamic> _ristournes = const [];
+  List<dynamic> _produitsMission = const [];
   bool _todayOnly = false;
   String _missionType = 'vente';
   bool _hasMission = true;
@@ -60,6 +61,7 @@ class _SalesPageState extends State<SalesPage> {
         _error = null;
         _sales = const [];
         _ristournes = const [];
+        _produitsMission = const [];
       });
       return;
     }
@@ -95,6 +97,9 @@ class _SalesPageState extends State<SalesPage> {
                   : (rist is Map<String, dynamic> && rist['data'] is List
                         ? rist['data'] as List
                         : const []);
+              _produitsMission = r['produits_mission'] is List
+                  ? r['produits_mission'] as List
+                  : const [];
             });
             debugPrint('SalesPage: _ristournes.length=${_ristournes.length}');
           }
@@ -109,6 +114,7 @@ class _SalesPageState extends State<SalesPage> {
         debugPrint(
           'SalesPage: missionType=$_missionType, skipping ristournes load',
         );
+        _produitsMission = const [];
       }
 
       // Charger les ventes
@@ -354,9 +360,25 @@ class _SalesPageState extends State<SalesPage> {
     final mrId = rist['id']; // mission_ristournes.id
     if (mrId == null) return;
 
+    final montantRistourne = _asDouble(rist['montant_ristourne']);
+    int? selectedProduitId = _asInt(rist['produit_id']) > 0
+        ? _asInt(rist['produit_id'])
+        : _firstProduitMissionId();
+    Map<String, dynamic> ristSelection() =>
+        _ristourneAvecProduit(rist, selectedProduitId);
+    final initialRist = ristSelection();
+    final prixCaisse = _ristournePrixCaisse(initialRist);
+    final caissesCouvertes = prixCaisse > 0
+        ? (montantRistourne / prixCaisse).floor()
+        : 0;
     final caissesPrevues = int.tryParse('${rist['caisses_prevues'] ?? 0}') ?? 0;
+    final caissesDejaLivrees =
+        int.tryParse('${rist['caisses_livrees'] ?? 0}') ?? 0;
+    final caissesInitiales = caissesDejaLivrees > 0
+        ? caissesDejaLivrees
+        : (caissesPrevues > 0 ? caissesPrevues : caissesCouvertes);
     final caissesLivreesCtrl = TextEditingController(
-      text: '${rist['caisses_livrees'] ?? 0}',
+      text: '$caissesInitiales',
     );
     final caissesVidesCtrl = TextEditingController(
       text: '${rist['caisses_vides_recues'] ?? 0}',
@@ -364,24 +386,116 @@ class _SalesPageState extends State<SalesPage> {
     final propositionCtrl = TextEditingController(
       text: (rist['proposition_montant'] ?? '').toString(),
     );
-    bool complementConfirme = (rist['complement_confirme'] ?? 0) == 1;
+    bool complementConfirme =
+        (rist['complement_confirme'] ?? 0) == 1 ||
+        _ristourneComplementPourCaisses(initialRist, caissesInitiales) > 0;
+
+    void syncComplement() {
+      final currentRist = ristSelection();
+      final caisses = int.tryParse(caissesLivreesCtrl.text) ?? 0;
+      final complement = _ristourneComplementPourCaisses(currentRist, caisses);
+      if (complement > 0) {
+        complementConfirme = true;
+        propositionCtrl.text = complement.toStringAsFixed(2);
+      } else if ((rist['complement_confirme'] ?? 0) != 1) {
+        complementConfirme = false;
+        propositionCtrl.text = '';
+      }
+    }
+
+    syncComplement();
 
     final result = await showDialog<bool>(
       context: context,
       builder: (ctx) {
         return StatefulBuilder(
-          builder: (ctx, setDialogState) => AlertDialog(
-            title: const Text('Confirmer la livraison'),
+          builder: (ctx, setDialogState) {
+            final currentRist = ristSelection();
+            final currentProduit = _produitMissionById(selectedProduitId);
+            final prixCaisse = _ristournePrixCaisse(currentRist);
+            final caissesCouvertes = prixCaisse > 0
+                ? (montantRistourne / prixCaisse).floor()
+                : 0;
+            final caissesLivrees =
+                int.tryParse(caissesLivreesCtrl.text) ?? 0;
+            final valeurLivree = caissesLivrees * prixCaisse;
+            final complementAuto = _ristourneComplementPourCaisses(
+              currentRist,
+              caissesLivrees,
+            );
+            final reste = _ristourneRestePourCaisses(currentRist, caissesLivrees);
+
+            return AlertDialog(
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(24),
+            ),
+            titlePadding: const EdgeInsets.fromLTRB(20, 18, 20, 8),
+            contentPadding: const EdgeInsets.fromLTRB(20, 8, 20, 0),
+            actionsPadding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
+            title: Row(
+              children: [
+                Container(
+                  width: 42,
+                  height: 42,
+                  decoration: BoxDecoration(
+                    color: Theme.of(ctx).colorScheme.primaryContainer,
+                    borderRadius: BorderRadius.circular(14),
+                  ),
+                  child: Icon(
+                    Icons.local_shipping_rounded,
+                    color: Theme.of(ctx).colorScheme.onPrimaryContainer,
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Text(
+                    'Confirmer la livraison',
+                    style: Theme.of(ctx).textTheme.titleLarge?.copyWith(
+                          fontWeight: FontWeight.w800,
+                        ),
+                  ),
+                ),
+              ],
+            ),
             content: SingleChildScrollView(
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    'Client: ${rist['client_nom'] ?? 'Client'} · Produit: ${rist['produit_nom'] ?? '-'}',
+                    'Client: ${rist['client_nom'] ?? 'Client'} · Produit: ${currentProduit?['nom'] ?? rist['produit_nom'] ?? 'A choisir'}',
                     style: Theme.of(ctx).textTheme.bodySmall?.copyWith(
                       fontWeight: FontWeight.w600,
                     ),
+                  ),
+                  const SizedBox(height: 10),
+                  DropdownButtonFormField<int>(
+                    value: selectedProduitId != null && selectedProduitId! > 0
+                        ? selectedProduitId
+                        : null,
+                    decoration: const InputDecoration(
+                      labelText: 'Produit choisi par le client',
+                      filled: true,
+                      border: OutlineInputBorder(),
+                    ),
+                    items: _produitsMission
+                        .whereType<Map>()
+                        .where((p) => _asInt(p['id']) > 0)
+                        .map((p) {
+                          final id = _asInt(p['id']);
+                          final stock = _asDouble(p['stock_actuel_caisses']);
+                          return DropdownMenuItem<int>(
+                            value: id,
+                            child: Text('${p['nom'] ?? 'Produit'} (${stock.toStringAsFixed(0)} cs)'),
+                          );
+                        })
+                        .toList(),
+                    onChanged: (value) {
+                      setDialogState(() {
+                        selectedProduitId = value;
+                        syncComplement();
+                      });
+                    },
                   ),
                   const SizedBox(height: 4),
                   Text(
@@ -390,13 +504,61 @@ class _SalesPageState extends State<SalesPage> {
                       color: Theme.of(ctx).colorScheme.onSurfaceVariant,
                     ),
                   ),
+                  const SizedBox(height: 10),
+                  Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: Theme.of(
+                        ctx,
+                      ).colorScheme.surfaceContainerHighest.withValues(
+                        alpha: 0.55,
+                      ),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        _dialogMoneyLine(ctx, 'Prix caisse', _fmtMoney(prixCaisse)),
+                        _dialogMoneyLine(
+                          ctx,
+                          'Couvert sans complement',
+                          '$caissesCouvertes cs',
+                        ),
+                        _dialogMoneyLine(
+                          ctx,
+                          'Valeur a livrer',
+                          _fmtMoney(valeurLivree),
+                        ),
+                        if (complementAuto > 0)
+                          _dialogMoneyLine(
+                            ctx,
+                            'Complement requis',
+                            _fmtMoney(complementAuto),
+                            color: Theme.of(ctx).colorScheme.error,
+                          )
+                        else
+                          _dialogMoneyLine(
+                            ctx,
+                            'Reste ristourne',
+                            _fmtMoney(reste),
+                            color: Theme.of(ctx).colorScheme.primary,
+                          ),
+                      ],
+                    ),
+                  ),
                   const Divider(height: 20),
                   TextField(
                     controller: caissesLivreesCtrl,
                     keyboardType: TextInputType.number,
+                    onChanged: (_) {
+                      setDialogState(syncComplement);
+                    },
                     decoration: InputDecoration(
                       labelText: 'Caisses livrées',
-                      hintText: 'Max: $caissesPrevues cs',
+                      hintText: caissesPrevues > 0
+                          ? 'Prevu: $caissesPrevues cs'
+                          : 'Couvert: $caissesCouvertes cs',
                       border: const OutlineInputBorder(),
                     ),
                   ),
@@ -414,8 +576,14 @@ class _SalesPageState extends State<SalesPage> {
                   const Divider(height: 20),
                   SwitchListTile(
                     value: complementConfirme,
-                    onChanged: (v) =>
-                        setDialogState(() => complementConfirme = v),
+                    onChanged: (v) => setDialogState(() {
+                      complementConfirme = v;
+                      if (v && complementAuto > 0) {
+                        propositionCtrl.text = complementAuto.toStringAsFixed(
+                          2,
+                        );
+                      }
+                    }),
                     title: const Text('Complément confirmé'),
                     subtitle: const Text(
                       'Le client a ajouté de l\'argent pour des caisses entières',
@@ -446,34 +614,52 @@ class _SalesPageState extends State<SalesPage> {
                 onPressed: () => Navigator.pop(ctx, false),
                 child: const Text('Annuler'),
               ),
-              FilledButton(
+              FilledButton.icon(
                 onPressed: () => Navigator.pop(ctx, true),
-                child: const Text('Enregistrer'),
+                icon: const Icon(Icons.check_rounded),
+                label: const Text('Enregistrer'),
               ),
             ],
-          ),
+          );
+          },
         );
       },
     );
 
     if (result != true) return;
+    if (selectedProduitId == null || selectedProduitId! <= 0) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Selectionnez le produit choisi')),
+        );
+      }
+      return;
+    }
 
     final caissesLivrees = int.tryParse(caissesLivreesCtrl.text) ?? 0;
     final caissesVides = int.tryParse(caissesVidesCtrl.text) ?? 0;
     final proposition = double.tryParse(
       propositionCtrl.text.replaceAll(',', '.'),
     );
+    final complementAuto = _ristourneComplementPourCaisses(
+      ristSelection(),
+      caissesLivrees,
+    );
+    final propositionFinale = complementConfirme
+        ? (proposition ?? complementAuto)
+        : null;
 
     try {
       final client = ApiService.instance.createClient();
       final payload = <String, dynamic>{
         'user_id': AuthService.instance.session?.agent?.id,
+        'produit_id': selectedProduitId,
         'caisses_livrees': caissesLivrees,
         'caisses_vides_recues': caissesVides,
         'complement_confirme': complementConfirme ? 1 : 0,
       };
-      if (complementConfirme && proposition != null) {
-        payload['proposition_montant'] = proposition;
+      if (complementConfirme && propositionFinale != null) {
+        payload['proposition_montant'] = propositionFinale;
       }
 
       await client.postJson(
@@ -490,15 +676,17 @@ class _SalesPageState extends State<SalesPage> {
         await _load();
       }
     } on ApiException catch (e) {
-      if (mounted)
+      if (mounted) {
         ScaffoldMessenger.of(
           context,
         ).showSnackBar(SnackBar(content: Text(e.message)));
+      }
     } catch (e) {
-      if (mounted)
+      if (mounted) {
         ScaffoldMessenger.of(
           context,
         ).showSnackBar(SnackBar(content: Text(e.toString())));
+      }
     }
   }
 
@@ -562,6 +750,71 @@ class _SalesPageState extends State<SalesPage> {
     );
   }
 
+  Widget _ristourneConversionSummary(
+    Map<String, dynamic> rist,
+    ColorScheme scheme,
+  ) {
+    final prixCaisse = _ristournePrixCaisse(rist);
+    final montantRistourne = _asDouble(rist['montant_ristourne']);
+    final caissesCouvertes = prixCaisse > 0
+        ? (montantRistourne / prixCaisse).floor()
+        : 0;
+    final caissesReference = max(
+      _asInt(rist['caisses_livrees']),
+      _asInt(rist['caisses_prevues']),
+    );
+    final complement = _ristourneComplementPourCaisses(
+      rist,
+      caissesReference,
+    );
+    final reste = _ristourneRestePourCaisses(rist, caissesReference);
+
+    return Wrap(
+      spacing: 8,
+      runSpacing: 6,
+      children: [
+        _plainInfoChip('Prix caisse', _fmtMoney(prixCaisse), scheme),
+        _plainInfoChip('Couvert', '$caissesCouvertes cs', scheme),
+        if (complement > 0)
+          _plainInfoChip(
+            'Complement',
+            _fmtMoney(complement),
+            scheme,
+            color: scheme.error,
+          )
+        else if (reste > 0)
+          _plainInfoChip(
+            'Reste',
+            _fmtMoney(reste),
+            scheme,
+            color: scheme.primary,
+          ),
+      ],
+    );
+  }
+
+  Widget _plainInfoChip(
+    String label,
+    String value,
+    ColorScheme scheme, {
+    Color? color,
+  }) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      decoration: BoxDecoration(
+        color: scheme.surfaceContainerHighest.withValues(alpha: 0.45),
+        borderRadius: BorderRadius.circular(10),
+      ),
+      child: Text(
+        '$label: $value',
+        style: Theme.of(context).textTheme.labelSmall?.copyWith(
+          color: color ?? scheme.onSurfaceVariant,
+          fontWeight: FontWeight.w700,
+        ),
+      ),
+    );
+  }
+
   @override
   void initState() {
     super.initState();
@@ -583,6 +836,103 @@ class _SalesPageState extends State<SalesPage> {
   double _asDouble(dynamic value) {
     if (value is num) return value.toDouble();
     return double.tryParse(value?.toString() ?? '') ?? 0;
+  }
+
+  int _asInt(dynamic value) {
+    if (value is int) return value;
+    if (value is num) return value.round();
+    return int.tryParse(value?.toString() ?? '') ?? 0;
+  }
+
+  double _ristournePrixCaisse(dynamic rist) {
+    if (rist is! Map) return 0;
+    final prixCaisse = _asDouble(rist['prix_vente_caisses']);
+    if (prixCaisse > 0) return prixCaisse;
+
+    final bouteilles = max(1, _asInt(rist['bouteilles_par_caisses']));
+    return _asDouble(rist['prix_vente_unitaire']) * bouteilles;
+  }
+
+  Map<String, dynamic>? _produitMissionById(int? produitId) {
+    if (produitId == null || produitId <= 0) return null;
+    for (final item in _produitsMission) {
+      if (item is Map && _asInt(item['id']) == produitId) {
+        return Map<String, dynamic>.from(item);
+      }
+    }
+    return null;
+  }
+
+  int? _firstProduitMissionId() {
+    for (final item in _produitsMission) {
+      if (item is Map) {
+        final id = _asInt(item['id']);
+        if (id > 0) return id;
+      }
+    }
+    return null;
+  }
+
+  Map<String, dynamic> _ristourneAvecProduit(dynamic rist, int? produitId) {
+    final base = rist is Map
+        ? Map<String, dynamic>.from(rist)
+        : <String, dynamic>{};
+    final produit = _produitMissionById(produitId);
+    if (produit != null) {
+      base['produit_id'] = produit['id'];
+      base['produit_nom'] = produit['nom'];
+      base['produit_code'] = produit['code'];
+      base['prix_vente_caisses'] = produit['prix_vente_caisses'];
+      base['prix_vente_unitaire'] = produit['prix_vente_unitaire'];
+      base['bouteilles_par_caisses'] = produit['bouteilles_par_caisses'];
+    }
+    return base;
+  }
+
+  double _ristourneComplementPourCaisses(dynamic rist, int caisses) {
+    final prixCaisse = _ristournePrixCaisse(rist);
+    final montantRistourne = rist is Map
+        ? _asDouble(rist['montant_ristourne'])
+        : 0.0;
+    return max(0.0, (caisses * prixCaisse) - montantRistourne);
+  }
+
+  double _ristourneRestePourCaisses(dynamic rist, int caisses) {
+    final prixCaisse = _ristournePrixCaisse(rist);
+    final montantRistourne = rist is Map
+        ? _asDouble(rist['montant_ristourne'])
+        : 0.0;
+    return max(0.0, montantRistourne - (caisses * prixCaisse));
+  }
+
+  Widget _dialogMoneyLine(
+    BuildContext context,
+    String label,
+    String value, {
+    Color? color,
+  }) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 4),
+      child: Row(
+        children: [
+          Expanded(
+            child: Text(
+              label,
+              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                color: Theme.of(context).colorScheme.onSurfaceVariant,
+              ),
+            ),
+          ),
+          Text(
+            value,
+            style: Theme.of(context).textTheme.bodySmall?.copyWith(
+              color: color,
+              fontWeight: FontWeight.w800,
+            ),
+          ),
+        ],
+      ),
+    );
   }
 
   String _fmtMoney(double value) {
@@ -783,34 +1133,35 @@ class _SalesPageState extends State<SalesPage> {
                         },
                 ),
                 const SizedBox(height: 12),
-                if (_missionType == 'vente')
-                  SizedBox(
-                    width: double.infinity,
-                    child: FilledButton.icon(
-                      onPressed: () async {
-                        final result = await Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (context) => const CreateSalePage(),
-                          ),
-                        );
-                        if (result == true) {
-                          await _load();
-                        }
-                      },
-                      icon: const Icon(Icons.add),
-                      label: const Text('Nouvelle vente'),
+                Row(
+                  children: [
+                    Expanded(
+                      child: FilledButton.icon(
+                        onPressed: () async {
+                          final result = await Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (context) => const CreateSalePage(),
+                            ),
+                          );
+                          if (result == true) {
+                            await _load();
+                          }
+                        },
+                        icon: const Icon(Icons.add),
+                        label: const Text('Nouvelle vente'),
+                      ),
                     ),
-                  )
-                else
-                  SizedBox(
-                    width: double.infinity,
-                    child: FilledButton.icon(
-                      onPressed: _loading ? null : () => _load(),
-                      icon: const Icon(Icons.refresh),
-                      label: const Text('Actualiser ristournes'),
-                    ),
-                  ),
+                    if (_missionType == 'ristourne') ...[
+                      const SizedBox(width: 10),
+                      IconButton.filledTonal(
+                        onPressed: _loading ? null : () => _load(),
+                        icon: const Icon(Icons.refresh),
+                        tooltip: 'Actualiser ristournes',
+                      ),
+                    ],
+                  ],
+                ),
               ],
             ),
           ),
@@ -1084,6 +1435,11 @@ class _SalesPageState extends State<SalesPage> {
                                                   fontWeight: FontWeight.w500,
                                                 ),
                                           ),
+                                          const SizedBox(height: 6),
+                                          _ristourneConversionSummary(
+                                            r,
+                                            scheme,
+                                          ),
                                         ],
                                       ),
                                     ),
@@ -1270,7 +1626,7 @@ class _SalesPageState extends State<SalesPage> {
               padding: const EdgeInsets.only(top: 12),
               child: Text(_error!, style: TextStyle(color: scheme.error)),
             ),
-          if (_missionType == 'vente' && _error == null && _sales.isEmpty)
+          if (_error == null && _sales.isEmpty)
             Padding(
               padding: const EdgeInsets.only(top: 12),
               child: Text(
@@ -1279,9 +1635,8 @@ class _SalesPageState extends State<SalesPage> {
               ),
             ),
           const SizedBox(height: 8),
-          if (_missionType == 'vente')
-            for (final item in _sales)
-              Padding(
+          for (final item in _sales)
+            Padding(
                 padding: const EdgeInsets.only(bottom: 10),
                 child: Container(
                   decoration: BoxDecoration(

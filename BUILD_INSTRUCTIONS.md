@@ -30,8 +30,8 @@ flutter build apk --split-per-abi --dart-define=API_BASE_URL=http://192.168.1.70
 ### En une seule commande
 
 ```bash
-php scripts/update_app_name.php && flutter build apk --split-per-abi --dart-define=API_BASE_URL=http://192.168.1.70/Bralima_logistique/public
-```
+php scripts/update_app_name.php && flutter build apk --split-per-abi 
+```--dart-define=API_BASE_URL=http://192.168.1.70/Bralima_logistique/public
 
 ---
 

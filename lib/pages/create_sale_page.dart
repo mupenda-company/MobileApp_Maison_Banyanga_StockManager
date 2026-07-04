@@ -943,44 +943,7 @@ class _CreateSalePageState extends State<CreateSalePage> {
           child: ListView(
             padding: const EdgeInsets.all(16),
             children: [
-              if (_isRistourne)
-                Container(
-                  width: double.infinity,
-                  padding: const EdgeInsets.all(24),
-                  margin: const EdgeInsets.only(bottom: 16),
-                  decoration: BoxDecoration(
-                    color: scheme.errorContainer,
-                    borderRadius: BorderRadius.circular(20),
-                    border: Border.all(color: scheme.error),
-                  ),
-                  child: Column(
-                    children: [
-                      Icon(
-                        Icons.block_rounded,
-                        size: 48,
-                        color: scheme.onErrorContainer,
-                      ),
-                      const SizedBox(height: 16),
-                      Text(
-                        'Mission de ristourne',
-                        style: Theme.of(context).textTheme.titleMedium
-                            ?.copyWith(
-                              fontWeight: FontWeight.w800,
-                              color: scheme.onErrorContainer,
-                            ),
-                      ),
-                      const SizedBox(height: 8),
-                      Text(
-                        'Les ventes ne sont pas possibles sur une mission de ristourne. Utilisez l\'onglet Ristournes pour gÃ©rer les livraisons.',
-                        textAlign: TextAlign.center,
-                        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                          color: scheme.onErrorContainer,
-                        ),
-                      ),
-                    ],
-                  ),
-                )
-              else ...[
+              ...[
                 if (_loading) const LinearProgressIndicator(minHeight: 2),
                 if (_error != null)
                   Padding(

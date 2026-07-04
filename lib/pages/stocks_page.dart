@@ -47,7 +47,13 @@ class _StocksPageState extends State<StocksPage> {
 
     try {
       final client = ApiService.instance.createClient();
-      final data = await client.getJson('${AppConfig.missionPath}/$missionId/stock');
+      final isRistourne =
+          (session?.mission?['type_mission'] ?? 'vente').toString() ==
+              'ristourne';
+      final usageQuery = isRistourne ? '?usage=ristourne' : '';
+      final data = await client.getJson(
+        '${AppConfig.missionPath}/$missionId/stock$usageQuery',
+      );
 
       final list = data is List
           ? data
