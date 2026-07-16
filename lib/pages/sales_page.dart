@@ -1,4 +1,5 @@
 import 'dart:math';
+import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
 import 'package:logis_agent/api/api_client.dart';
@@ -9,6 +10,9 @@ import 'package:logis_agent/pages/sale_invoice_page.dart';
 import 'package:logis_agent/services/app_refresh_service.dart';
 import 'package:logis_agent/services/api_service.dart';
 import 'package:logis_agent/services/auth_service.dart';
+import 'package:pdf/pdf.dart';
+import 'package:pdf/widgets.dart' as pw;
+import 'package:printing/printing.dart';
 
 class SalesPage extends StatefulWidget {
   const SalesPage({super.key});
@@ -23,7 +27,7 @@ class _SalesPageState extends State<SalesPage> {
   List<dynamic> _sales = const [];
   List<dynamic> _ristournes = const [];
   List<dynamic> _produitsMission = const [];
-  bool _todayOnly = false;
+  bool _printingDailySummary = false;
   String _missionType = 'vente';
   bool _hasMission = true;
 
@@ -119,10 +123,6 @@ class _SalesPageState extends State<SalesPage> {
 
       // Charger les ventes
       final query = <String>['mission_id=$missionId'];
-
-      if (_todayOnly) {
-        query.add('date=${Uri.encodeComponent(_currentDayLabel)}');
-      }
 
       final data = await client.getJson(
         '${AppConfig.salesPath}?${query.join('&')}',
@@ -955,6 +955,155 @@ class _SalesPageState extends State<SalesPage> {
     return '${display.toStringAsFixed(2)} $devise';
   }
 
+  Future<Uint8List> _buildDailySummaryPdf(
+    PdfPageFormat _, {
+    required double montantRecu,
+    required double caissesVendues,
+    required double emballagesRecus,
+  }) async {
+    final doc = pw.Document();
+    doc.addPage(
+      pw.Page(
+        pageFormat: const PdfPageFormat(
+          80 * PdfPageFormat.mm,
+          100 * PdfPageFormat.mm,
+        ),
+        margin: const pw.EdgeInsets.all(8),
+        build: (context) => pw.Column(
+          crossAxisAlignment: pw.CrossAxisAlignment.stretch,
+          children: [
+            pw.Center(
+              child: pw.Text(
+                'RÉSUMÉ JOURNALIER',
+                style: pw.TextStyle(
+                  fontSize: 14,
+                  fontWeight: pw.FontWeight.bold,
+                ),
+              ),
+            ),
+            pw.SizedBox(height: 4),
+            pw.Center(
+              child: pw.Text(
+                _currentDayLabel,
+                style: pw.TextStyle(
+                  fontSize: 9,
+                  fontWeight: pw.FontWeight.bold,
+                ),
+              ),
+            ),
+            pw.SizedBox(height: 8),
+            pw.Divider(),
+            _dailySummaryRow('Montant reçu', _fmtMoney(montantRecu)),
+            _dailySummaryRow(
+              'Caisses vendues',
+              '${caissesVendues.toStringAsFixed(1)} cs',
+            ),
+            _dailySummaryRow(
+              'Emballages reçus',
+              '${emballagesRecus.toStringAsFixed(1)} cs',
+            ),
+            pw.Divider(),
+          ],
+        ),
+      ),
+    );
+    return doc.save();
+  }
+
+  pw.Widget _dailySummaryRow(String label, String value) {
+    return pw.Padding(
+      padding: const pw.EdgeInsets.symmetric(vertical: 6),
+      child: pw.Row(
+        mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+        children: [
+          pw.Text(
+            label,
+            style: pw.TextStyle(
+              fontSize: 10,
+              fontWeight: pw.FontWeight.bold,
+            ),
+          ),
+          pw.Text(
+            value,
+            style: pw.TextStyle(
+              fontSize: 11,
+              fontWeight: pw.FontWeight.bold,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _printDailySummary() async {
+    if (_printingDailySummary) return;
+
+    final missionId = AuthService.instance.session?.mission?['id']?.toString();
+    if (missionId == null || missionId.isEmpty) return;
+
+    setState(() => _printingDailySummary = true);
+    try {
+      final client = ApiService.instance.createClient();
+      final response = await client.getJson(
+        '${AppConfig.salesPath}?mission_id=$missionId&date=${Uri.encodeComponent(_currentDayLabel)}',
+      );
+      final ventes = response is List
+          ? response
+          : (response is Map<String, dynamic> && response['data'] is List
+                ? response['data'] as List
+                : const []);
+
+      if (ventes.isEmpty) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Aucune vente effectuée aujourd’hui')),
+          );
+        }
+        return;
+      }
+
+      final montantRecu = ventes.fold<double>(
+        0,
+        (sum, vente) =>
+            sum + (vente is Map ? _asDouble(vente['total_ttc']) : 0),
+      );
+      final caissesVendues = ventes.fold<double>(
+        0,
+        (sum, vente) =>
+            sum + (vente is Map ? _asDouble(vente['caisses_vendues']) : 0),
+      );
+      final emballagesRecus = ventes.fold<double>(
+        0,
+        (sum, vente) =>
+            sum + (vente is Map ? _asDouble(vente['emballages_recus']) : 0),
+      );
+
+      await Printing.layoutPdf(
+        onLayout: (format) => _buildDailySummaryPdf(
+          format,
+          montantRecu: montantRecu,
+          caissesVendues: caissesVendues,
+          emballagesRecus: emballagesRecus,
+        ),
+        name: 'resume_ventes_$_currentDayLabel.pdf',
+      );
+    } on ApiException catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text(e.message)));
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Impression impossible : $e')),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _printingDailySummary = false);
+    }
+  }
+
   Widget _summaryTile({
     required String label,
     required String value,
@@ -1109,28 +1258,25 @@ class _SalesPageState extends State<SalesPage> {
                   ],
                 ),
                 const SizedBox(height: 16),
-                SegmentedButton<bool>(
-                  segments: const [
-                    ButtonSegment<bool>(
-                      value: true,
-                      label: Text('Aujourd’hui'),
-                      icon: Icon(Icons.today),
+                SizedBox(
+                  width: double.infinity,
+                  child: FilledButton.tonalIcon(
+                    onPressed: _loading || _printingDailySummary
+                        ? null
+                        : _printDailySummary,
+                    icon: _printingDailySummary
+                        ? const SizedBox(
+                            width: 18,
+                            height: 18,
+                            child: CircularProgressIndicator(strokeWidth: 2),
+                          )
+                        : const Icon(Icons.summarize_outlined),
+                    label: Text(
+                      _printingDailySummary
+                          ? 'Préparation...'
+                          : 'Imprimer le résumé du jour',
                     ),
-                    ButtonSegment<bool>(
-                      value: false,
-                      label: Text('Tout'),
-                      icon: Icon(Icons.history),
-                    ),
-                  ],
-                  selected: {_todayOnly},
-                  onSelectionChanged: _loading
-                      ? null
-                      : (selection) async {
-                          setState(() {
-                            _todayOnly = selection.first;
-                          });
-                          await _load();
-                        },
+                  ),
                 ),
                 const SizedBox(height: 12),
                 Row(

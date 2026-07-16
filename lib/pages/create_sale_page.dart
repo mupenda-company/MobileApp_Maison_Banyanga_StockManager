@@ -20,6 +20,7 @@ class _CreateSalePageState extends State<CreateSalePage> {
 
   List<Map<String, dynamic>> _clients = const [];
   List<Map<String, dynamic>> _stock = const [];
+  List<Map<String, dynamic>> _emballages = const [];
   List<Map<String, dynamic>> _recentSales = const [];
 
   String? _clientId;
@@ -61,10 +62,12 @@ class _CreateSalePageState extends State<CreateSalePage> {
 
   double _toDisplay(double amountBase) {
     if (_devise == _deviseBase) return amountBase;
-    if (_deviseBase == 'CDF' && _devise == 'USD')
+    if (_deviseBase == 'CDF' && _devise == 'USD') {
       return amountBase / _tauxChange;
-    if (_deviseBase == 'USD' && _devise == 'CDF')
+    }
+    if (_deviseBase == 'USD' && _devise == 'CDF') {
       return amountBase * _tauxChange;
+    }
     return amountBase;
   }
 
@@ -400,6 +403,21 @@ class _CreateSalePageState extends State<CreateSalePage> {
                 ? stockResp['data'] as List
                 : null);
 
+      List? emballagesList;
+      try {
+        final emballagesResp = await client.getJson(
+          '${AppConfig.missionPath}/$missionId/emballages',
+        );
+        emballagesList = emballagesResp is List
+            ? emballagesResp
+            : (emballagesResp is Map<String, dynamic> &&
+                  emballagesResp['data'] is List
+                  ? emballagesResp['data'] as List
+                  : null);
+      } catch (_) {
+        emballagesList = stockList;
+      }
+
       final mappedClients = <Map<String, dynamic>>[];
       for (final c in (clientsList ?? const [])) {
         if (c is Map<String, dynamic>) mappedClients.add(c);
@@ -408,6 +426,11 @@ class _CreateSalePageState extends State<CreateSalePage> {
       final mappedStock = <Map<String, dynamic>>[];
       for (final s in (stockList ?? const [])) {
         if (s is Map<String, dynamic>) mappedStock.add(s);
+      }
+
+      final mappedEmballages = <Map<String, dynamic>>[];
+      for (final e in (emballagesList ?? stockList ?? const [])) {
+        if (e is Map<String, dynamic>) mappedEmballages.add(e);
       }
 
       for (final item in mappedStock) {
@@ -420,6 +443,18 @@ class _CreateSalePageState extends State<CreateSalePage> {
           });
           return c;
         });
+        _qtyEmptyControllers.putIfAbsent(id, () {
+          final c = TextEditingController(text: '0');
+          c.addListener(() {
+            if (mounted) setState(() {});
+          });
+          return c;
+        });
+      }
+
+      for (final item in mappedEmballages) {
+        final id = int.tryParse(item['id']?.toString() ?? '');
+        if (id == null) continue;
         _qtyEmptyControllers.putIfAbsent(id, () {
           final c = TextEditingController(text: '0');
           c.addListener(() {
@@ -450,6 +485,7 @@ class _CreateSalePageState extends State<CreateSalePage> {
       setState(() {
         _clients = mappedClients;
         _stock = mappedStock;
+        _emballages = mappedEmballages.isEmpty ? mappedStock : mappedEmballages;
         _recentSales = mappedSales;
       });
     } on ApiException catch (e) {
@@ -487,15 +523,8 @@ class _CreateSalePageState extends State<CreateSalePage> {
 
   double get _totalEmballagesRecus {
     double total = 0;
-    for (final item in _stock) {
-      final id = int.tryParse(item['id']?.toString() ?? '');
-      if (id == null) continue;
-
-      final qtyCsText = _qtyCsControllers[id]?.text ?? '0';
-      final qtyCs = double.tryParse(qtyCsText.replaceAll(',', '.')) ?? 0;
-      if (qtyCs <= 0) continue;
-
-      final qtyEmptyText = _qtyEmptyControllers[id]?.text ?? '0';
+    for (final controller in _qtyEmptyControllers.values) {
+      final qtyEmptyText = controller.text;
       final qtyEmptyInput =
           double.tryParse(qtyEmptyText.replaceAll(',', '.')) ?? 0;
       total += qtyEmptyInput < 0 ? 0 : qtyEmptyInput;
@@ -528,6 +557,19 @@ class _CreateSalePageState extends State<CreateSalePage> {
       total += double.tryParse(qtyCsText.replaceAll(',', '.')) ?? 0;
     }
     return total;
+  }
+
+  List<Map<String, dynamic>> get _emballagesHorsMission {
+    final stockIds = _stock
+        .map((item) => int.tryParse(item['id']?.toString() ?? '') ?? 0)
+        .where((id) => id > 0)
+        .toSet();
+
+    return (_emballages.isEmpty ? const <Map<String, dynamic>>[] : _emballages)
+        .where((item) {
+      final id = int.tryParse(item['id']?.toString() ?? '') ?? 0;
+      return id > 0 && !stockIds.contains(id);
+    }).toList();
   }
 
   Future<void> _save() async {
@@ -593,7 +635,7 @@ class _CreateSalePageState extends State<CreateSalePage> {
       (sum, p) => sum + _asDouble(p['quantite_caisses']),
     );
     final emballagesRecus = <Map<String, dynamic>>[];
-    for (final item in _stock) {
+    for (final item in (_emballages.isEmpty ? _stock : _emballages)) {
       final id = int.tryParse(item['id']?.toString() ?? '');
       if (id == null) continue;
 
@@ -816,6 +858,11 @@ class _CreateSalePageState extends State<CreateSalePage> {
                 ?.toString() ??
             clientNom;
 
+        var emballagesRestants = _totalEmballagesRecus.clamp(
+          0,
+          _totalCaisses,
+        ).toDouble();
+
         for (final item in _stock) {
           final id = int.tryParse(item['id']?.toString() ?? '');
           if (id == null) continue;
@@ -828,7 +875,12 @@ class _CreateSalePageState extends State<CreateSalePage> {
           final puBase = _asDouble(item['prix_vente_unitaire']);
           final prixCaisseBase = puBase * btlParCs;
           final sousTotalBase = (qtyCs * btlParCs) * puBase;
-          final qtyEmpty = _asDouble(item['caisses_vides_recues']);
+          final qtyEmpty = emballagesRestants >= qtyCs
+              ? qtyCs
+              : emballagesRestants;
+          emballagesRestants = (emballagesRestants - qtyEmpty)
+              .clamp(0, double.infinity)
+              .toDouble();
 
           lignes.add(
             SaleInvoiceLine(
@@ -917,6 +969,11 @@ class _CreateSalePageState extends State<CreateSalePage> {
     final totalCaisses = _totalCaisses;
     final totalEmballagesRecus = _totalEmballagesRecus;
     final totalDetteEmballages = _totalDetteEmballages;
+    final emballagesComplets =
+        totalCaisses > 0 &&
+        (totalCaisses - totalEmballagesRecus).abs() <= 0.0001;
+    final emballagesExcedentaires =
+        totalEmballagesRecus > totalCaisses + 0.0001;
 
     final scheme = Theme.of(context).colorScheme;
 
@@ -1074,10 +1131,15 @@ class _CreateSalePageState extends State<CreateSalePage> {
                                   ),
                                   const SizedBox(height: 4),
                                   Text(
-                                    'Emballages reçus: ${totalEmballagesRecus.toStringAsFixed(1)} cs  |  Dette: ${totalDetteEmballages.toStringAsFixed(1)} cs',
+                                    'Emballages reçus: ${totalEmballagesRecus.toStringAsFixed(1)} cs / Produits achetés: ${totalCaisses.toStringAsFixed(1)} cs  |  ${emballagesComplets ? 'Complet : aucune dette' : (emballagesExcedentaires ? 'Excédent non autorisé' : 'Dette : ${totalDetteEmballages.toStringAsFixed(1)} cs')}',
                                     style: Theme.of(context).textTheme.bodySmall
                                         ?.copyWith(
-                                          color: scheme.onSurfaceVariant,
+                                          color: totalCaisses <= 0
+                                              ? scheme.onSurfaceVariant
+                                              : (emballagesComplets
+                                                    ? Colors.green.shade700
+                                                    : scheme.error),
+                                          fontWeight: FontWeight.w700,
                                         ),
                                   ),
                                 ],
@@ -1268,6 +1330,95 @@ class _CreateSalePageState extends State<CreateSalePage> {
                     ),
                   ),
                 const SizedBox(height: 6),
+                if (_emballagesHorsMission.isNotEmpty) ...[
+                  const SizedBox(height: 8),
+                  Text(
+                    'Autres emballages recus',
+                    style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  Card(
+                    child: Padding(
+                      padding: const EdgeInsets.all(12),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'Saisir ici les emballages compatibles recus qui ne faisaient pas partie de la mission.',
+                            style: Theme.of(context).textTheme.bodySmall
+                                ?.copyWith(color: scheme.onSurfaceVariant),
+                          ),
+                          const SizedBox(height: 10),
+                          for (final item in _emballagesHorsMission)
+                            Padding(
+                              padding: const EdgeInsets.only(bottom: 10),
+                              child: Builder(
+                                builder: (context) {
+                                  final id = int.tryParse(
+                                    item['id']?.toString() ?? '',
+                                  );
+                                  final controller = id == null
+                                      ? null
+                                      : _qtyEmptyControllers[id];
+                                  final btl = _btlParCaisse(item);
+                                  final prixEmb = _toDisplay(
+                                    _asDouble(item['prix_emballage']),
+                                  );
+
+                                  return Row(
+                                    children: [
+                                      Expanded(
+                                        child: Column(
+                                          crossAxisAlignment:
+                                              CrossAxisAlignment.start,
+                                          children: [
+                                            Text(
+                                              (item['nom'] ?? 'Produit')
+                                                  .toString(),
+                                              style: const TextStyle(
+                                                fontWeight: FontWeight.w600,
+                                              ),
+                                            ),
+                                            Text(
+                                              '${btl.toStringAsFixed(0)} btl/cs | Emballage: ${_fmtAmount(prixEmb)}',
+                                              style: Theme.of(context)
+                                                  .textTheme
+                                                  .bodySmall
+                                                  ?.copyWith(
+                                                    color: scheme
+                                                        .onSurfaceVariant,
+                                                  ),
+                                            ),
+                                          ],
+                                        ),
+                                      ),
+                                      const SizedBox(width: 10),
+                                      SizedBox(
+                                        width: 120,
+                                        child: TextField(
+                                          controller: controller,
+                                          enabled: !_saving,
+                                          keyboardType:
+                                              const TextInputType.numberWithOptions(
+                                                decimal: true,
+                                              ),
+                                          decoration: const InputDecoration(
+                                            labelText: 'Vides',
+                                          ),
+                                        ),
+                                      ),
+                                    ],
+                                  );
+                                },
+                              ),
+                            ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ],
                 const SizedBox(height: 8),
                 Text(
                   'Historique des ventes récentes',

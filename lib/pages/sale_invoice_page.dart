@@ -145,7 +145,7 @@ class _SaleInvoicePageState extends State<SaleInvoicePage> {
     return '${v.toStringAsFixed(2)} ${widget.devise}';
   }
 
-  Future<Uint8List> _buildPdf(PdfPageFormat format) async {
+  Future<Uint8List> _buildPdf(PdfPageFormat _) async {
     final doc = pw.Document();
 
     final title = widget.numeroFacture == null || widget.numeroFacture!.isEmpty
@@ -194,16 +194,16 @@ class _SaleInvoicePageState extends State<SaleInvoicePage> {
 
     doc.addPage(
       pw.MultiPage(
-        pageFormat: format,
-        margin: const pw.EdgeInsets.all(12),
+        pageFormat: PdfPageFormat.a6,
+        margin: const pw.EdgeInsets.all(8),
         maxPages: 100,
         build: (context) {
           return [
             if (logoImage != null)
               pw.Center(
                 child: pw.Container(
-                  width: 52,
-                  height: 52,
+                  width: 38,
+                  height: 38,
                   margin: const pw.EdgeInsets.only(bottom: 4),
                   child: pw.ClipRRect(
                     horizontalRadius: 8,
@@ -216,7 +216,7 @@ class _SaleInvoicePageState extends State<SaleInvoicePage> {
               child: pw.Text(
                 company.toUpperCase(),
                 style: pw.TextStyle(
-                  fontSize: 22,
+                  fontSize: 16,
                   fontWeight: pw.FontWeight.bold,
                 ),
               ),
@@ -226,7 +226,7 @@ class _SaleInvoicePageState extends State<SaleInvoicePage> {
                 child: pw.Text(
                   adresse,
                   style: pw.TextStyle(
-                    fontSize: 13,
+                    fontSize: 9,
                     fontWeight: pw.FontWeight.bold,
                   ),
                 ),
@@ -236,7 +236,7 @@ class _SaleInvoicePageState extends State<SaleInvoicePage> {
                 child: pw.Text(
                   'Tél: $telSociete',
                   style: pw.TextStyle(
-                    fontSize: 13,
+                    fontSize: 9,
                     fontWeight: pw.FontWeight.bold,
                   ),
                 ),
@@ -246,7 +246,7 @@ class _SaleInvoicePageState extends State<SaleInvoicePage> {
                 child: pw.Text(
                   'Email: $email',
                   style: pw.TextStyle(
-                    fontSize: 13,
+                    fontSize: 9,
                     fontWeight: pw.FontWeight.bold,
                   ),
                 ),
@@ -256,7 +256,7 @@ class _SaleInvoicePageState extends State<SaleInvoicePage> {
                 child: pw.Text(
                   'Contact: $contact',
                   style: pw.TextStyle(
-                    fontSize: 13,
+                    fontSize: 9,
                     fontWeight: pw.FontWeight.bold,
                   ),
                 ),
@@ -266,7 +266,7 @@ class _SaleInvoicePageState extends State<SaleInvoicePage> {
                 child: pw.Text(
                   'RCCM: $rccm',
                   style: pw.TextStyle(
-                    fontSize: 13,
+                    fontSize: 9,
                     fontWeight: pw.FontWeight.bold,
                   ),
                 ),
@@ -276,7 +276,7 @@ class _SaleInvoicePageState extends State<SaleInvoicePage> {
                 child: pw.Text(
                   'ID NAT: $idNat',
                   style: pw.TextStyle(
-                    fontSize: 13,
+                    fontSize: 9,
                     fontWeight: pw.FontWeight.bold,
                   ),
                 ),
@@ -286,7 +286,7 @@ class _SaleInvoicePageState extends State<SaleInvoicePage> {
                 child: pw.Text(
                   'NIF: $nif',
                   style: pw.TextStyle(
-                    fontSize: 13,
+                    fontSize: 9,
                     fontWeight: pw.FontWeight.bold,
                   ),
                 ),
@@ -296,7 +296,7 @@ class _SaleInvoicePageState extends State<SaleInvoicePage> {
                 child: pw.Text(
                   'Compte: $compte',
                   style: pw.TextStyle(
-                    fontSize: 13,
+                    fontSize: 9,
                     fontWeight: pw.FontWeight.bold,
                   ),
                 ),
@@ -309,7 +309,7 @@ class _SaleInvoicePageState extends State<SaleInvoicePage> {
                 title,
                 style: pw.TextStyle(
                   fontWeight: pw.FontWeight.bold,
-                  fontSize: 18,
+                  fontSize: 14,
                 ),
               ),
             ),
@@ -318,7 +318,7 @@ class _SaleInvoicePageState extends State<SaleInvoicePage> {
               child: pw.Text(
                 '${widget.date.day.toString().padLeft(2, '0')}/${widget.date.month.toString().padLeft(2, '0')}/${widget.date.year} ${widget.date.hour.toString().padLeft(2, '0')}:${widget.date.minute.toString().padLeft(2, '0')}',
                 style: pw.TextStyle(
-                  fontSize: 13,
+                  fontSize: 9,
                   fontWeight: pw.FontWeight.bold,
                 ),
               ),
@@ -326,13 +326,13 @@ class _SaleInvoicePageState extends State<SaleInvoicePage> {
             pw.SizedBox(height: 8),
             pw.Text(
               'Client: ${widget.clientNom}',
-              style: pw.TextStyle(fontWeight: pw.FontWeight.bold, fontSize: 17),
+              style: pw.TextStyle(fontWeight: pw.FontWeight.bold, fontSize: 12),
             ),
             if (clientTel != null && clientTel.isNotEmpty)
               pw.Text(
                 'Téléphone: $clientTel',
                 style: pw.TextStyle(
-                  fontSize: 15,
+                  fontSize: 10,
                   fontWeight: pw.FontWeight.bold,
                 ),
               ),
@@ -340,7 +340,7 @@ class _SaleInvoicePageState extends State<SaleInvoicePage> {
               pw.Text(
                 'Zone: $zone',
                 style: pw.TextStyle(
-                  fontSize: 15,
+                  fontSize: 10,
                   fontWeight: pw.FontWeight.bold,
                 ),
               ),
@@ -348,17 +348,15 @@ class _SaleInvoicePageState extends State<SaleInvoicePage> {
               pw.Text(
                 'N° client: $clientNumero',
                 style: pw.TextStyle(
-                  fontSize: 15,
+                  fontSize: 10,
                   fontWeight: pw.FontWeight.bold,
                 ),
               ),
             if (widget.produitsCumules != null && widget.produitsCumules! > 0)
               pw.Text(
-                widget.ristourneInfoPresent
-                    ? 'Produits cumulés (période): ${widget.produitsCumules!.toStringAsFixed(1)} cs'
-                    : 'Produits cumulés: ${widget.produitsCumules!.toStringAsFixed(1)} cs',
+                'Produits cumulés (mois): ${widget.produitsCumules!.toStringAsFixed(1)} cs',
                 style: pw.TextStyle(
-                  fontSize: 15,
+                  fontSize: 10,
                   fontWeight: pw.FontWeight.bold,
                 ),
               ),
@@ -366,7 +364,7 @@ class _SaleInvoicePageState extends State<SaleInvoicePage> {
               pw.Text(
                 'Ristourne: ${(widget.ristourneTaux ?? 0).toStringAsFixed(2)}% (${_fmtAmount(widget.montantRistourneNet ?? widget.ristourneMontant ?? 0)})',
                 style: pw.TextStyle(
-                  fontSize: 15,
+                  fontSize: 10,
                   fontWeight: pw.FontWeight.bold,
                 ),
               ),
@@ -384,7 +382,7 @@ class _SaleInvoicePageState extends State<SaleInvoicePage> {
                         l.produitNom,
                         style: pw.TextStyle(
                           fontWeight: pw.FontWeight.bold,
-                          fontSize: 16,
+                          fontSize: 11,
                         ),
                       ),
                       pw.SizedBox(height: 2),
@@ -394,7 +392,7 @@ class _SaleInvoicePageState extends State<SaleInvoicePage> {
                           pw.Text(
                             '${l.caisses.toStringAsFixed(1)} cs',
                             style: pw.TextStyle(
-                              fontSize: 15,
+                              fontSize: 10,
                               fontWeight: pw.FontWeight.bold,
                             ),
                           ),
@@ -402,7 +400,7 @@ class _SaleInvoicePageState extends State<SaleInvoicePage> {
                             _fmtAmount(l.prixCaisse),
                             style: pw.TextStyle(
                               fontWeight: pw.FontWeight.bold,
-                              fontSize: 15,
+                              fontSize: 10,
                             ),
                           ),
                         ],
@@ -413,7 +411,7 @@ class _SaleInvoicePageState extends State<SaleInvoicePage> {
                           pw.Text(
                             'Vides: ${l.caissesVidesRecues.toStringAsFixed(1)} cs / Dette: ${l.detteCaisses.toStringAsFixed(1)} cs',
                             style: pw.TextStyle(
-                              fontSize: 14,
+                              fontSize: 9,
                               fontWeight: pw.FontWeight.bold,
                             ),
                           ),
@@ -421,7 +419,7 @@ class _SaleInvoicePageState extends State<SaleInvoicePage> {
                             _fmtAmount(l.sousTotal),
                             style: pw.TextStyle(
                               fontWeight: pw.FontWeight.bold,
-                              fontSize: 15,
+                              fontSize: 10,
                             ),
                           ),
                         ],
@@ -439,7 +437,7 @@ class _SaleInvoicePageState extends State<SaleInvoicePage> {
                 pw.Text(
                   'Total caisses achetées:',
                   style: pw.TextStyle(
-                    fontSize: 15,
+                    fontSize: 10,
                     fontWeight: pw.FontWeight.bold,
                   ),
                 ),
@@ -447,7 +445,7 @@ class _SaleInvoicePageState extends State<SaleInvoicePage> {
                   '${totalCaisses.toStringAsFixed(1)} cs',
                   style: pw.TextStyle(
                     fontWeight: pw.FontWeight.bold,
-                    fontSize: 15,
+                    fontSize: 10,
                   ),
                 ),
               ],
@@ -459,7 +457,7 @@ class _SaleInvoicePageState extends State<SaleInvoicePage> {
                 pw.Text(
                   'Emballages reçus:',
                   style: pw.TextStyle(
-                    fontSize: 15,
+                    fontSize: 10,
                     fontWeight: pw.FontWeight.bold,
                   ),
                 ),
@@ -467,7 +465,7 @@ class _SaleInvoicePageState extends State<SaleInvoicePage> {
                   '${totalEmballagesRecus.toStringAsFixed(1)} cs',
                   style: pw.TextStyle(
                     fontWeight: pw.FontWeight.bold,
-                    fontSize: 15,
+                    fontSize: 10,
                   ),
                 ),
               ],
@@ -479,7 +477,7 @@ class _SaleInvoicePageState extends State<SaleInvoicePage> {
                 pw.Text(
                   'Dette emballages:',
                   style: pw.TextStyle(
-                    fontSize: 15,
+                    fontSize: 10,
                     fontWeight: pw.FontWeight.bold,
                   ),
                 ),
@@ -487,7 +485,7 @@ class _SaleInvoicePageState extends State<SaleInvoicePage> {
                   '${totalDetteEmballages.toStringAsFixed(1)} cs',
                   style: pw.TextStyle(
                     fontWeight: pw.FontWeight.bold,
-                    fontSize: 15,
+                    fontSize: 10,
                   ),
                 ),
               ],
@@ -499,14 +497,14 @@ class _SaleInvoicePageState extends State<SaleInvoicePage> {
                 pw.Text(
                   'Total HT:',
                   style: pw.TextStyle(
-                    fontSize: 15,
+                    fontSize: 10,
                     fontWeight: pw.FontWeight.bold,
                   ),
                 ),
                 pw.Text(
                   _fmtAmount(widget.totalHt),
                   style: pw.TextStyle(
-                    fontSize: 15,
+                    fontSize: 10,
                     fontWeight: pw.FontWeight.bold,
                   ),
                 ),
@@ -519,14 +517,14 @@ class _SaleInvoicePageState extends State<SaleInvoicePage> {
                 pw.Text(
                   'TVA:',
                   style: pw.TextStyle(
-                    fontSize: 15,
+                    fontSize: 10,
                     fontWeight: pw.FontWeight.bold,
                   ),
                 ),
                 pw.Text(
                   _fmtAmount(widget.totalTva),
                   style: pw.TextStyle(
-                    fontSize: 15,
+                    fontSize: 10,
                     fontWeight: pw.FontWeight.bold,
                   ),
                 ),
@@ -545,14 +543,14 @@ class _SaleInvoicePageState extends State<SaleInvoicePage> {
                     'TOTAL TTC:',
                     style: pw.TextStyle(
                       fontWeight: pw.FontWeight.bold,
-                      fontSize: 20,
+                      fontSize: 14,
                     ),
                   ),
                   pw.Text(
                     _fmtAmount(widget.totalTtc),
                     style: pw.TextStyle(
                       fontWeight: pw.FontWeight.bold,
-                      fontSize: 20,
+                      fontSize: 14,
                     ),
                   ),
                 ],
@@ -563,7 +561,7 @@ class _SaleInvoicePageState extends State<SaleInvoicePage> {
               child: pw.Text(
                 'Merci pour votre confiance !',
                 style: pw.TextStyle(
-                  fontSize: 14,
+                  fontSize: 9,
                   fontWeight: pw.FontWeight.bold,
                 ),
               ),
@@ -574,7 +572,7 @@ class _SaleInvoicePageState extends State<SaleInvoicePage> {
                 child: pw.Text(
                   'Vendeur: ${widget.vendeurNom!.trim()}',
                   style: pw.TextStyle(
-                    fontSize: 14,
+                    fontSize: 9,
                     fontWeight: pw.FontWeight.bold,
                   ),
                 ),
@@ -624,7 +622,7 @@ class _SaleInvoicePageState extends State<SaleInvoicePage> {
         ),
         body: PdfPreview(
           canChangePageFormat: false,
-          initialPageFormat: PdfPageFormat.a5,
+          initialPageFormat: PdfPageFormat.a6,
           build: _buildPdf,
         ),
       ),
