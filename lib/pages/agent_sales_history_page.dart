@@ -48,6 +48,12 @@ class _AgentSalesHistoryPageState extends State<AgentSalesHistoryPage> {
     }).toList();
   }
 
+  int _saleId(dynamic value) {
+    if (value is int) return value;
+    if (value is num) return value.toInt();
+    return int.tryParse(value?.toString() ?? '') ?? 0;
+  }
+
   Future<void> _load() async {
     if (AppConfig.apiBaseUrl.isEmpty) {
       setState(() {
@@ -1007,7 +1013,7 @@ class _AgentSalesHistoryPageState extends State<AgentSalesHistoryPage> {
                   InkWell(
                     onTap: () {
                       setState(() {
-                        final venteId = item['id'] as int? ?? 0;
+                        final venteId = _saleId(item['id']);
                         if (_expandedSales.contains(venteId)) {
                           _expandedSales.remove(venteId);
                         } else {
@@ -1071,7 +1077,7 @@ class _AgentSalesHistoryPageState extends State<AgentSalesHistoryPage> {
                               ),
                             ),
                             Icon(
-                              _expandedSales.contains(item['id'] as int? ?? 0)
+                              _expandedSales.contains(_saleId(item['id']))
                                   ? Icons.expand_less
                                   : Icons.expand_more,
                               color: scheme.onSurfaceVariant,
@@ -1130,7 +1136,7 @@ class _AgentSalesHistoryPageState extends State<AgentSalesHistoryPage> {
                       ],
                     ),
                   ),
-                  if (_expandedSales.contains(item['id'] as int? ?? 0)) ...[
+                  if (_expandedSales.contains(_saleId(item['id']))) ...[
                     const SizedBox(height: 12),
                     const Divider(height: 1),
                     const SizedBox(height: 8),
