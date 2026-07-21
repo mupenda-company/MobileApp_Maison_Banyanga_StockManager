@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:logis_agent/api/api_client.dart';
 import 'package:logis_agent/config/app_config.dart';
 import 'package:logis_agent/pages/sale_invoice_page.dart';
+import 'package:logis_agent/pages/client_qr_scanner_page.dart';
 import 'package:logis_agent/services/api_service.dart';
 import 'package:logis_agent/services/app_refresh_service.dart';
 import 'package:logis_agent/services/auth_service.dart';
@@ -411,7 +412,7 @@ class _CreateSalePageState extends State<CreateSalePage> {
         emballagesList = emballagesResp is List
             ? emballagesResp
             : (emballagesResp is Map<String, dynamic> &&
-                  emballagesResp['data'] is List
+                      emballagesResp['data'] is List
                   ? emballagesResp['data'] as List
                   : null);
       } catch (_) {
@@ -532,6 +533,73 @@ class _CreateSalePageState extends State<CreateSalePage> {
     return total;
   }
 
+  Future<void> _scanClientQr() async {
+    final rawValue = await Navigator.push<String>(
+      context,
+      MaterialPageRoute(builder: (_) => const ClientQrScannerPage()),
+    );
+    if (!mounted || rawValue == null) return;
+
+    const prefix = 'BRALIMA-CLIENT:';
+    final normalized = rawValue.trim();
+    final token = normalized.toUpperCase().startsWith(prefix)
+        ? normalized.substring(prefix.length).trim().toLowerCase()
+        : normalized.toLowerCase();
+
+    if (!RegExp(r'^[a-f0-9]{32}$').hasMatch(token)) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Ce QR code n’est pas un QR client valide.'),
+        ),
+      );
+      return;
+    }
+
+    setState(() => _loading = true);
+    try {
+      final api = ApiService.instance.createClient();
+      final response = await api.getJson('${AppConfig.clientQrPath}/$token');
+      final payload =
+          response is Map<String, dynamic> && response['data'] is Map
+          ? Map<String, dynamic>.from(response['data'] as Map)
+          : (response is Map<String, dynamic> ? response : null);
+      if (payload == null || payload['id'] == null) {
+        throw const ApiException(message: 'Client introuvable');
+      }
+
+      final id = payload['id'].toString();
+      setState(() {
+        if (!_clients.any((client) => client['id']?.toString() == id)) {
+          _clients = [..._clients, payload];
+        }
+        _clientId = id;
+        _clientSearch = '';
+      });
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Client sélectionné : ${payload['nom'] ?? 'Client'}'),
+          ),
+        );
+      }
+    } on ApiException catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text(e.message)));
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Impossible d’identifier le client : $e')),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _loading = false);
+    }
+  }
+
   double get _totalDetteEmballages {
     double total = 0;
     for (final item in _stock) {
@@ -567,9 +635,10 @@ class _CreateSalePageState extends State<CreateSalePage> {
 
     return (_emballages.isEmpty ? const <Map<String, dynamic>>[] : _emballages)
         .where((item) {
-      final id = int.tryParse(item['id']?.toString() ?? '') ?? 0;
-      return id > 0 && !stockIds.contains(id);
-    }).toList();
+          final id = int.tryParse(item['id']?.toString() ?? '') ?? 0;
+          return id > 0 && !stockIds.contains(id);
+        })
+        .toList();
   }
 
   Future<void> _save() async {
@@ -858,10 +927,9 @@ class _CreateSalePageState extends State<CreateSalePage> {
                 ?.toString() ??
             clientNom;
 
-        var emballagesRestants = _totalEmballagesRecus.clamp(
-          0,
-          _totalCaisses,
-        ).toDouble();
+        var emballagesRestants = _totalEmballagesRecus
+            .clamp(0, _totalCaisses)
+            .toDouble();
 
         for (final item in _stock) {
           final id = int.tryParse(item['id']?.toString() ?? '');
@@ -1034,6 +1102,17 @@ class _CreateSalePageState extends State<CreateSalePage> {
                                       });
                                     },
                                   ),
+                          ),
+                        ),
+                        const SizedBox(height: 10),
+                        SizedBox(
+                          width: double.infinity,
+                          child: FilledButton.icon(
+                            onPressed: (_saving || _loading)
+                                ? null
+                                : _scanClientQr,
+                            icon: const Icon(Icons.qr_code_scanner_rounded),
+                            label: const Text('Scanner le QR du client'),
                           ),
                         ),
                         const SizedBox(height: 12),
@@ -1387,8 +1466,8 @@ class _CreateSalePageState extends State<CreateSalePage> {
                                                   .textTheme
                                                   .bodySmall
                                                   ?.copyWith(
-                                                    color: scheme
-                                                        .onSurfaceVariant,
+                                                    color:
+                                                        scheme.onSurfaceVariant,
                                                   ),
                                             ),
                                           ],
